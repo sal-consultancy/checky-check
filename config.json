@@ -1,0 +1,42 @@
+{
+    "user": "ansible",
+    "key": "/Users/sjoerd/id_ansible_rsa_host_ssdnodes",
+    "checks": {
+        "uptime_check": {
+            "command": "uptime | awk '{print $3}'",
+            "fail_when": "<",
+            "fail_value": "100"
+        },
+        "kernel_version": {
+            "command":"uname -r",
+            "fail_when": "!=",
+            "fail_value": "5.15.0-97-generic"
+        },
+        "firewall_running": {
+            "service": "ufw",
+            "fail_when": "=",
+            "fail_value": "0"
+        },
+        "sap_running": {
+            "command": "ps -ef | grep ${sap_sid} | grep -v grep| wc -l",
+            "fail_when": "<",
+            "fail_value": "2"
+        }
+    },
+    "hosts": {
+        "lala1.apps.salconsultancy.com": {
+            "checks": [
+                "firewall_running",
+                "uptime_check"            ]
+        },
+        "lala2.apps.salconsultancy.com": {
+            "vars": {
+                "sap_sid":"SXX01"
+            },
+            "checks": [
+                "firewall_running",
+                "sap_running"
+            ]
+        }
+    }
+}
