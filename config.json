@@ -1,6 +1,9 @@
 {
     "user": "ansible",
     "key": "/Users/sjoerd/id_ansible_rsa_host_ssdnodes",
+    "defaults": {
+        "sap_sid": "xxxx"
+    },
     "checks": {
         "uptime_check": {
             "command": "uptime | awk '{print $3}'",
@@ -31,7 +34,7 @@
         },
         "lala2.apps.salconsultancy.com": {
             "vars": {
-                "sap_sid":"SXX01"
+                "sap_sid":"zabbix"
             },
             "checks": [
                 "firewall_running",
