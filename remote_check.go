@@ -16,10 +16,22 @@ import (
 )
 
 type Config struct {
-    User   string           `json:"user"`
-    Key    string           `json:"key"`
-    Checks map[string]Check `json:"checks"`
-    Hosts  map[string]Host  `json:"hosts"`
+    User           string            `json:"user"`
+    Key            string            `json:"key"`
+    HostDefaults   HostDefaults      `json:"host_defaults"`
+    HostTemplates  map[string]HostTemplate `json:"host_templates"`
+    Checks         map[string]Check  `json:"checks"`
+    Hosts          map[string]Host   `json:"hosts"`
+}
+
+type HostDefaults struct {
+    HostVars  map[string]string `json:"host_vars"`
+    HostChecks []string         `json:"host_checks"`
+}
+
+type HostTemplate struct {
+    HostVars   map[string]string `json:"host_vars,omitempty"`
+    HostChecks []string          `json:"host_checks"`
 }
 
 type Check struct {
@@ -30,8 +42,9 @@ type Check struct {
 }
 
 type Host struct {
-    Vars   map[string]string `json:"vars,omitempty"`
-    Checks []string          `json:"checks"`
+    HostTemplate string            `json:"host_template,omitempty"`
+    HostVars     map[string]string `json:"host_vars,omitempty"`
+    HostChecks   []string          `json:"host_checks"`
 }
 
 // Functie om de privésleutel in te laden
@@ -139,9 +152,44 @@ func replaceVariables(command string, vars map[string]string) string {
     return command
 }
 
+func mergeVars(varsList ...map[string]string) map[string]string {
+    result := make(map[string]string)
+    for _, vars := range varsList {
+        for k, v := range vars {
+            result[k] = v
+        }
+    }
+    return result
+}
+
 func runChecksOnHost(config Config, host string, hostConfig Host, wg *sync.WaitGroup) {
     defer wg.Done()
-    for _, checkName := range hostConfig.Checks {
+
+    // Combineer variabelen in de volgorde: defaults -> template -> host
+    var combinedVars map[string]string
+    if hostConfig.HostTemplate != "" {
+        template, exists := config.HostTemplates[hostConfig.HostTemplate]
+        if exists {
+            combinedVars = mergeVars(config.HostDefaults.HostVars, template.HostVars, hostConfig.HostVars)
+        } else {
+            combinedVars = mergeVars(config.HostDefaults.HostVars, hostConfig.HostVars)
+        }
+    } else {
+        combinedVars = mergeVars(config.HostDefaults.HostVars, hostConfig.HostVars)
+    }
+
+    // Combineer checks in de volgorde: defaults -> template -> host
+    var combinedChecks []string
+    combinedChecks = append(combinedChecks, config.HostDefaults.HostChecks...)
+    if hostConfig.HostTemplate != "" {
+        template, exists := config.HostTemplates[hostConfig.HostTemplate]
+        if exists {
+            combinedChecks = append(combinedChecks, template.HostChecks...)
+        }
+    }
+    combinedChecks = append(combinedChecks, hostConfig.HostChecks...)
+
+    for _, checkName := range combinedChecks {
         check, exists := config.Checks[checkName]
         if !exists {
             log.Printf("Check %s not defined in config\n", checkName)
@@ -153,7 +201,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, wg *sync.WaitG
         var checkFailed bool
 
         if check.Command != "" {
-            command := replaceVariables(check.Command, hostConfig.Vars)
+            command := replaceVariables(check.Command, combinedVars)
             result, err = runCommand(config.User, host, filepath.Clean(os.ExpandEnv(config.Key)), command)
             if err != nil {
                 log.Printf("Failed to run command %s on host %s: %v\n", command, host, err)

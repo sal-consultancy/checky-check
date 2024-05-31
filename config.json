@@ -1,8 +1,25 @@
 {
     "user": "ansible",
     "key": "/Users/sjoerd/id_ansible_rsa_host_ssdnodes",
-    "defaults": {
-        "sap_sid": "xxxx"
+    "host_defaults": {
+        "host_vars": {
+            "sap_sid": "ssh"
+        },
+        "host_checks":[
+            "uptime_check",
+            "firewall_running"
+        ]
+    },
+    "host_templates":{
+        "sap_host_v1": {
+            "host_vars": {
+                "sap_type": "webdisp",
+                "sap_sid": "host_v1"
+            },
+            "host_checks": [
+                "kernel_version"
+            ]
+        }
     },
     "checks": {
         "uptime_check": {
@@ -24,21 +41,31 @@
             "command": "ps -ef | grep ${sap_sid} | grep -v grep| wc -l",
             "fail_when": "<",
             "fail_value": "2"
+        },
+        "echo_var_check":{
+            "command": "echo hallo ${sap_sid}",
+            "fail_when": "!=",
+            "fail_value": "hallo" 
         }
     },
+    
     "hosts": {
         "lala1.apps.salconsultancy.com": {
-            "checks": [
-                "firewall_running",
-                "uptime_check"            ]
+            "host_template": "sap_host_v1",
+            "host_checks": [
+                "sap_running",
+                "echo_var_check",
+                "uptime_check"            
+            ]
         },
         "lala2.apps.salconsultancy.com": {
-            "vars": {
+            "host_template": "sap_host_v1",
+            "host_vars": {
                 "sap_sid":"zabbix"
             },
-            "checks": [
-                "firewall_running",
-                "sap_running"
+            "host_checks": [
+                "sap_running",
+                "echo_var_check"
             ]
         }
     }
