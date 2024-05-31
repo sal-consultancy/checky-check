@@ -16,22 +16,33 @@ import (
 )
 
 type Config struct {
-    User           string            `json:"user"`
-    Key            string            `json:"key"`
-    HostDefaults   HostDefaults      `json:"host_defaults"`
-    HostTemplates  map[string]HostTemplate `json:"host_templates"`
-    Checks         map[string]Check  `json:"checks"`
-    Hosts          map[string]Host   `json:"hosts"`
+    Identities    map[string]Identity `json:"identities"`
+    HostDefaults  HostDefaults        `json:"host_defaults"`
+    HostTemplates map[string]HostTemplate `json:"host_templates"`
+    Checks        map[string]Check    `json:"checks"`
+    HostGroups    map[string]HostGroup `json:"host_groups"`
+}
+
+type Identity struct {
+    User       string `json:"user"`
+    Key        string `json:"key"`
+    Passphrase string `json:"passphrase,omitempty"`
 }
 
 type HostDefaults struct {
-    HostVars  map[string]string `json:"host_vars"`
-    HostChecks []string         `json:"host_checks"`
+    Identity   string            `json:"identity"`
+    HostVars   map[string]string `json:"host_vars"`
+    HostChecks []string          `json:"host_checks"`
 }
 
 type HostTemplate struct {
     HostVars   map[string]string `json:"host_vars,omitempty"`
     HostChecks []string          `json:"host_checks"`
+}
+
+type HostGroup struct {
+    HostVars map[string]string `json:"host_vars,omitempty"`
+    Hosts    map[string]Host   `json:"hosts"`
 }
 
 type Check struct {
@@ -42,31 +53,39 @@ type Check struct {
 }
 
 type Host struct {
+    Identity     string            `json:"identity,omitempty"`
     HostTemplate string            `json:"host_template,omitempty"`
     HostVars     map[string]string `json:"host_vars,omitempty"`
     HostChecks   []string          `json:"host_checks"`
 }
 
-// Functie om de privésleutel in te laden
-func publicKeyFile(file string) ssh.AuthMethod {
-    buffer, err := ioutil.ReadFile(file)
+// Functie om de privésleutel met of zonder passphrase in te laden
+func publicKeyFile(file, passphrase string) ssh.AuthMethod {
+    buffer, err := ioutil.ReadFile(filepath.Clean(file))
     if err != nil {
         log.Fatalf("unable to read private key: %v", err)
     }
 
-    key, err := ssh.ParsePrivateKey(buffer)
+    var key ssh.Signer
+    if passphrase == "" {
+        key, err = ssh.ParsePrivateKey(buffer)
+    } else {
+        key, err = ssh.ParsePrivateKeyWithPassphrase(buffer, []byte(passphrase))
+    }
+
     if err != nil {
         log.Fatalf("unable to parse private key: %v", err)
     }
+
     return ssh.PublicKeys(key)
 }
 
 // Functie om een commando uit te voeren via SSH
-func runCommand(user, host, keyPath, command string) (string, error) {
+func runCommand(user, host, keyPath, passphrase, command string) (string, error) {
     sshConfig := &ssh.ClientConfig{
         User: user,
         Auth: []ssh.AuthMethod{
-            publicKeyFile(keyPath),
+            publicKeyFile(keyPath, passphrase),
         },
         HostKeyCallback: ssh.InsecureIgnoreHostKey(),
     }
@@ -92,9 +111,9 @@ func runCommand(user, host, keyPath, command string) (string, error) {
 }
 
 // Functie om een service status te controleren via SSH
-func checkServiceStatus(user, host, keyPath, service string) (string, error) {
+func checkServiceStatus(user, host, keyPath, passphrase, service string) (string, error) {
     command := fmt.Sprintf("systemctl is-active %s", service)
-    result, err := runCommand(user, host, keyPath, command)
+    result, err := runCommand(user, host, keyPath, passphrase, command)
     if err != nil {
         return "", err
     }
@@ -162,23 +181,27 @@ func mergeVars(varsList ...map[string]string) map[string]string {
     return result
 }
 
-func runChecksOnHost(config Config, host string, hostConfig Host, wg *sync.WaitGroup) {
+func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[string]string, wg *sync.WaitGroup, logger *log.Logger) {
     defer wg.Done()
 
-    // Combineer variabelen in de volgorde: defaults -> template -> host
+    logger.Printf("Running checks on host: %s", host)
+
+    // Combineer variabelen in de volgorde: defaults -> template -> groep -> host
     var combinedVars map[string]string
     if hostConfig.HostTemplate != "" {
         template, exists := config.HostTemplates[hostConfig.HostTemplate]
         if exists {
-            combinedVars = mergeVars(config.HostDefaults.HostVars, template.HostVars, hostConfig.HostVars)
+            combinedVars = mergeVars(config.HostDefaults.HostVars, template.HostVars, groupVars, hostConfig.HostVars)
         } else {
-            combinedVars = mergeVars(config.HostDefaults.HostVars, hostConfig.HostVars)
+            combinedVars = mergeVars(config.HostDefaults.HostVars, groupVars, hostConfig.HostVars)
         }
     } else {
-        combinedVars = mergeVars(config.HostDefaults.HostVars, hostConfig.HostVars)
+        combinedVars = mergeVars(config.HostDefaults.HostVars, groupVars, hostConfig.HostVars)
     }
 
-    // Combineer checks in de volgorde: defaults -> template -> host
+    logger.Printf("Combined vars for host %s: %v", host, combinedVars)
+
+    // Combineer checks in de volgorde: defaults -> template -> groep -> host
     var combinedChecks []string
     combinedChecks = append(combinedChecks, config.HostDefaults.HostChecks...)
     if hostConfig.HostTemplate != "" {
@@ -189,12 +212,43 @@ func runChecksOnHost(config Config, host string, hostConfig Host, wg *sync.WaitG
     }
     combinedChecks = append(combinedChecks, hostConfig.HostChecks...)
 
+    logger.Printf("Combined checks for host %s: %v", host, combinedChecks)
+
+    // Combineer identiteit in de volgorde: defaults -> template -> groep -> host
+    identityName := config.HostDefaults.Identity
+    if hostConfig.HostTemplate != "" {
+        template, exists := config.HostTemplates[hostConfig.HostTemplate]
+        if exists && template.HostVars != nil {
+            if id, exists := template.HostVars["identity"]; exists {
+                identityName = id
+            }
+        }
+    }
+    if groupVars != nil {
+        if id, exists := groupVars["identity"]; exists {
+            identityName = id
+        }
+    }
+    if hostConfig.Identity != "" {
+        identityName = hostConfig.Identity
+    }
+
+    identity, exists := config.Identities[identityName]
+    if !exists {
+        logger.Fatalf("Identity %s not found for host %s", identityName, host)
+        return
+    }
+
+    logger.Printf("Using identity for host %s: %v", host, identity)
+
     for _, checkName := range combinedChecks {
         check, exists := config.Checks[checkName]
         if !exists {
-            log.Printf("Check %s not defined in config\n", checkName)
+            logger.Printf("Check %s not defined in config\n", checkName)
             continue
         }
+
+        logger.Printf("Running check %s on host %s", checkName, host)
 
         var result string
         var err error
@@ -202,16 +256,18 @@ func runChecksOnHost(config Config, host string, hostConfig Host, wg *sync.WaitG
 
         if check.Command != "" {
             command := replaceVariables(check.Command, combinedVars)
-            result, err = runCommand(config.User, host, filepath.Clean(os.ExpandEnv(config.Key)), command)
+            logger.Printf("Running command on host %s: %s", host, command)
+            result, err = runCommand(identity.User, host, filepath.Clean(os.ExpandEnv(identity.Key)), identity.Passphrase, command)
             if err != nil {
-                log.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
+                logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
                 continue
             }
             checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
         } else if check.Service != "" {
-            result, err = checkServiceStatus(config.User, host, filepath.Clean(os.ExpandEnv(config.Key)), check.Service)
+            logger.Printf("Checking service %s on host %s", check.Service, host)
+            result, err = checkServiceStatus(identity.User, host, filepath.Clean(os.ExpandEnv(identity.Key)), identity.Passphrase, check.Service)
             if err != nil {
-                log.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
+                logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
                 continue
             }
             checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
@@ -239,13 +295,25 @@ func main() {
         log.Fatalf("unable to parse config file: %v", err)
     }
 
+    // Maak een logbestand aan voor gedetailleerde logging
+    logFile, err := os.OpenFile("remote_check.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatalf("unable to open log file: %v", err)
+    }
+    defer logFile.Close()
+
+    logger := log.New(logFile, "", log.LstdFlags)
+
     // Gebruik een WaitGroup om te wachten tot alle goroutines klaar zijn
     var wg sync.WaitGroup
 
-    // Verwerk elke host en voer de opgegeven checks parallel uit
-    for host, hostConfig := range config.Hosts {
-        wg.Add(1)
-        go runChecksOnHost(config, host, hostConfig, &wg)
+    // Verwerk elke host in de hostgroepen en voer de opgegeven checks parallel uit
+    for _, group := range config.HostGroups {
+        groupVars := group.HostVars
+        for host, hostConfig := range group.Hosts {
+            wg.Add(1)
+            go runChecksOnHost(config, host, hostConfig, groupVars, &wg, logger)
+        }
     }
 
     // Wacht tot alle goroutines klaar zijn

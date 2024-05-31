@@ -1,7 +1,18 @@
 {
-    "user": "ansible",
-    "key": "/Users/sjoerd/id_ansible_rsa_host_ssdnodes",
+    "identities": {
+        "ssd01": {
+            "user": "ansible",
+            "key": "/Users/sjoerd/id_ansible_rsa_host_ssdnodes"
+        },
+        "as": {
+            "user": "root",
+            "key": "/Users/sjoerd/id_rsa_root_automatesap",
+            "passphrase": "SnnkYVhz9JN3kh"
+
+        }
+    },
     "host_defaults": {
+        "identity": "ssd01",
         "host_vars": {
             "sap_sid": "ssh"
         },
@@ -48,25 +59,51 @@
             "fail_value": "hallo" 
         }
     },
-    
-    "hosts": {
-        "lala1.apps.salconsultancy.com": {
-            "host_template": "sap_host_v1",
-            "host_checks": [
-                "sap_running",
-                "echo_var_check",
-                "uptime_check"            
-            ]
+    "host_groups":{
+        "sap_feo": {
+            "hosts": {
+                "lala1.apps.salconsultancy.com": {
+                    "host_template": "sap_host_v1",
+                    "host_checks": [
+                        "sap_running",
+                        "echo_var_check",
+                        "uptime_check"            
+                    ]
+                },
+                "lala2.apps.salconsultancy.com": {
+                    "host_template": "sap_host_v1",
+                    "host_vars": {
+                        "sap_sid":"zabbix"
+                    },
+                    "host_checks": [
+                        "sap_running",
+                        "echo_var_check"
+                    ]
+                }
+            }
         },
-        "lala2.apps.salconsultancy.com": {
-            "host_template": "sap_host_v1",
+        "sap_fea": {
             "host_vars": {
-                "sap_sid":"zabbix"
+                "sap_sid": "fea"
             },
-            "host_checks": [
-                "sap_running",
-                "echo_var_check"
-            ]
+            "hosts": {
+                "lala-fea.apps.salconsultancy.com": {
+                    "host_template": "sap_host_v1",
+                    "host_checks": [
+                        "sap_running",
+                        "echo_var_check"
+                    ]
+                },
+                "tooling.automatesap.com": {
+                    "host_template": "sap_host_v1",
+                    "identity": "as",
+                    "host_checks": [
+                        "sap_running",
+                        "echo_var_check"
+                    ]
+                }
+            }
         }
     }
+
 }
