@@ -25,8 +25,9 @@ type Config struct {
 
 type Identity struct {
     User       string `json:"user"`
-    Key        string `json:"key"`
+    Key        string `json:"key,omitempty"`
     Passphrase string `json:"passphrase,omitempty"`
+    Password   string `json:"password,omitempty"`
 }
 
 type HostDefaults struct {
@@ -59,18 +60,21 @@ type Host struct {
     HostChecks   []string          `json:"host_checks"`
 }
 
-// Functie om de privésleutel met of zonder passphrase in te laden
-func publicKeyFile(file, passphrase string) ssh.AuthMethod {
-    buffer, err := ioutil.ReadFile(filepath.Clean(file))
+// Functie om de juiste SSH-authenticatiemethode te kiezen
+func getSSHAuthMethod(identity Identity) ssh.AuthMethod {
+    if identity.Password != "" {
+        return ssh.Password(identity.Password)
+    }
+    buffer, err := ioutil.ReadFile(filepath.Clean(identity.Key))
     if err != nil {
         log.Fatalf("unable to read private key: %v", err)
     }
 
     var key ssh.Signer
-    if passphrase == "" {
+    if identity.Passphrase == "" {
         key, err = ssh.ParsePrivateKey(buffer)
     } else {
-        key, err = ssh.ParsePrivateKeyWithPassphrase(buffer, []byte(passphrase))
+        key, err = ssh.ParsePrivateKeyWithPassphrase(buffer, []byte(identity.Passphrase))
     }
 
     if err != nil {
@@ -81,29 +85,32 @@ func publicKeyFile(file, passphrase string) ssh.AuthMethod {
 }
 
 // Functie om een commando uit te voeren via SSH
-func runCommand(user, host, keyPath, passphrase, command string) (string, error) {
+func runCommand(user, host string, authMethod ssh.AuthMethod, command string) (string, error) {
     sshConfig := &ssh.ClientConfig{
         User: user,
         Auth: []ssh.AuthMethod{
-            publicKeyFile(keyPath, passphrase),
+            authMethod,
         },
         HostKeyCallback: ssh.InsecureIgnoreHostKey(),
     }
 
     client, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", host), sshConfig)
     if err != nil {
+        log.Printf("Failed to dial: %v", err)
         return "", err
     }
     defer client.Close()
 
     session, err := client.NewSession()
     if err != nil {
+        log.Printf("Failed to create session: %v", err)
         return "", err
     }
     defer session.Close()
 
     output, err := session.CombinedOutput(command)
     if err != nil {
+        log.Printf("Failed to run command: %v", err)
         return "", err
     }
 
@@ -111,9 +118,9 @@ func runCommand(user, host, keyPath, passphrase, command string) (string, error)
 }
 
 // Functie om een service status te controleren via SSH
-func checkServiceStatus(user, host, keyPath, passphrase, service string) (string, error) {
+func checkServiceStatus(user, host string, authMethod ssh.AuthMethod, service string) (string, error) {
     command := fmt.Sprintf("systemctl is-active %s", service)
-    result, err := runCommand(user, host, keyPath, passphrase, command)
+    result, err := runCommand(user, host, authMethod, command)
     if err != nil {
         return "", err
     }
@@ -241,6 +248,8 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
     logger.Printf("Using identity for host %s: %v", host, identity)
 
+    authMethod := getSSHAuthMethod(identity)
+
     for _, checkName := range combinedChecks {
         check, exists := config.Checks[checkName]
         if !exists {
@@ -257,7 +266,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
         if check.Command != "" {
             command := replaceVariables(check.Command, combinedVars)
             logger.Printf("Running command on host %s: %s", host, command)
-            result, err = runCommand(identity.User, host, filepath.Clean(os.ExpandEnv(identity.Key)), identity.Passphrase, command)
+            result, err = runCommand(identity.User, host, authMethod, command)
             if err != nil {
                 logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
                 continue
@@ -265,7 +274,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
             checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
         } else if check.Service != "" {
             logger.Printf("Checking service %s on host %s", check.Service, host)
-            result, err = checkServiceStatus(identity.User, host, filepath.Clean(os.ExpandEnv(identity.Key)), identity.Passphrase, check.Service)
+            result, err = checkServiceStatus(identity.User, host, authMethod, check.Service)
             if err != nil {
                 logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
                 continue

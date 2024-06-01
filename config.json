@@ -8,7 +8,10 @@
             "user": "root",
             "key": "/Users/sjoerd/id_rsa_root_automatesap",
             "passphrase": "SnnkYVhz9JN3kh"
-
+        },
+        "mm": {
+            "user": "mm",
+            "password":"mm"
         }
     },
     "host_defaults": {
@@ -17,8 +20,7 @@
             "sap_sid": "ssh"
         },
         "host_checks":[
-            "uptime_check",
-            "firewall_running"
+            "uptime_check"        
         ]
     },
     "host_templates":{
@@ -28,14 +30,15 @@
                 "sap_sid": "host_v1"
             },
             "host_checks": [
-                "kernel_version"
+                "kernel_version",
+                "echo_var_check"
             ]
         }
     },
     "checks": {
         "uptime_check": {
             "command": "uptime | awk '{print $3}'",
-            "fail_when": "<",
+            "fail_when": ">",
             "fail_value": "100"
         },
         "kernel_version": {
@@ -61,24 +64,15 @@
     },
     "host_groups":{
         "sap_feo": {
+            "host_vars": {
+                "sap_sid": "feo"
+            },
             "hosts": {
-                "lala1.apps.salconsultancy.com": {
-                    "host_template": "sap_host_v1",
-                    "host_checks": [
-                        "sap_running",
-                        "echo_var_check",
-                        "uptime_check"            
-                    ]
+                "feo1.apps.salconsultancy.com": {
+                    "host_template": "sap_host_v1"
                 },
-                "lala2.apps.salconsultancy.com": {
-                    "host_template": "sap_host_v1",
-                    "host_vars": {
-                        "sap_sid":"zabbix"
-                    },
-                    "host_checks": [
-                        "sap_running",
-                        "echo_var_check"
-                    ]
+                "feo2.apps.salconsultancy.com": {
+                    "host_template": "sap_host_v1"
                 }
             }
         },
@@ -87,20 +81,20 @@
                 "sap_sid": "fea"
             },
             "hosts": {
-                "lala-fea.apps.salconsultancy.com": {
+                "fea2.tooling.automatesap.com": {
                     "host_template": "sap_host_v1",
-                    "host_checks": [
-                        "sap_running",
-                        "echo_var_check"
-                    ]
-                },
-                "tooling.automatesap.com": {
+                    "identity": "as"
+                }
+            }
+        },
+        "mm": {
+            "host_vars": {
+                "sap_sid": "mm"
+            },
+            "hosts": {
+                "192.168.68.135": {
                     "host_template": "sap_host_v1",
-                    "identity": "as",
-                    "host_checks": [
-                        "sap_running",
-                        "echo_var_check"
-                    ]
+                    "identity": "mm"
                 }
             }
         }
