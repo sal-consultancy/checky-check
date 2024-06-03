@@ -1,0 +1,33 @@
+{
+    "identities": {
+        "id1": {
+            "user": "username",
+            "key": "id_rsa",
+            "passphrase": "secret"
+        }
+    },
+    "host_defaults": {
+        "identity": "id1",
+        "host_vars": {
+            "timezone": "Europe/Amsterdam"
+        },
+        "host_checks":[
+            "check_uptime"
+        ]
+    },
+    "checks": {
+        "check_uptime": {
+            "command": "uptime | awk '{print $3}'",
+            "fail_when": ">",
+            "fail_value": "100"
+        }
+    },
+    "host_groups":{
+        "grp-1": {
+            "hosts": {
+                "host1": { }
+            }
+        }
+    }
+
+}
