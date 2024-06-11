@@ -7,7 +7,7 @@
         }
     },
     "host_defaults": {
-        "identity": "id1",
+        "identity": "ssd",
         "host_vars": {
             "timezone": "Europe/Amsterdam"
         },
@@ -19,13 +19,13 @@
         "check_uptime": {
             "command": "uptime | awk '{print $3}'",
             "fail_when": ">",
-            "fail_value": "100"
+            "fail_value": "90"
         }
     },
     "host_groups":{
         "grp-1": {
             "hosts": {
-                "host1": { }
+                "feo.tooling.automatesap.com": { }
             }
         }
     }
