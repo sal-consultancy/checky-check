@@ -1,5 +1,8 @@
-remote_check.log
+keys
 config.json
+results.json
+*.html
 *.exe
 *.zip
-keys
+*.svg
+*.log

@@ -14,77 +14,150 @@ import (
 	"gonum.org/v1/plot/vg"
 )
 
-type CheckResult struct {
-	Host      string `json:"host"`
-	Check     string `json:"check"`
-	Status    string `json:"status"`
-	Value     string `json:"value"`
-	Timestamp string `json:"timestamp"`
-}
-
-type Check struct {
-	Description string `json:"description"`
-	Graph       struct {
-		Title string `json:"title"`
-		Type  string `json:"type"`
-	} `json:"graph"`
-	Command   string `json:"command"`
-	FailWhen  string `json:"fail_when"`
-	FailValue string `json:"fail_value"`
-}
-
-type Report struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	CSS         string `json:"css"`
-}
-
-type Config struct {
-	Report       Report           `json:"report"`
-	Checks       map[string]Check `json:"checks"`
-	HostDefaults struct {
-		HostChecks []string `json:"host_checks"`
-	} `json:"host_defaults"`
-	HostTemplates map[string]struct {
-		HostChecks []string `json:"host_checks"`
-	} `json:"host_templates"`
-	Hosts map[string]struct {
-		HostTemplate string   `json:"host_template"`
-		HostChecks   []string `json:"host_checks"`
-	} `json:"hosts"`
-}
-
-func getEffectiveChecks(config Config, hostName string, hostConfig struct {
-	HostTemplate string   `json:"host_template"`
-	HostChecks   []string `json:"host_checks"`
-}) []string {
-	checkSet := make(map[string]struct{})
-
-	// Voeg de standaard checks toe
-	for _, check := range config.HostDefaults.HostChecks {
-		checkSet[check] = struct{}{}
+func generateReport(configPath string) error {
+	// Voeg hier de inhoud van generate_chart.go toe
+	configData, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("unable to read config file: %v", err)
 	}
 
-	// Voeg de template checks toe
-	if template, ok := config.HostTemplates[hostConfig.HostTemplate]; ok {
-		for _, check := range template.HostChecks {
-			checkSet[check] = struct{}{}
+	var config Config
+	if err := json.Unmarshal(configData, &config); err != nil {
+		return fmt.Errorf("unable to parse config file: %v", err)
+	}
+
+	// Laad de resultaten uit het JSON-bestand
+	data, err := ioutil.ReadFile("results.json")
+	if err != nil {
+		return fmt.Errorf("unable to read result file: %v", err)
+	}
+
+	var results []CheckResult
+	if err := json.Unmarshal(data, &results); err != nil {
+		return fmt.Errorf("unable to parse result file: %v", err)
+	}
+
+	// Maak een set van alle uitgevoerde checks
+	allChecksSet := make(map[string]struct{})
+	for _, group := range config.HostGroups {
+		for hostName, hostConfig := range group.Hosts {
+			checks := getEffectiveChecks(config, hostName, hostConfig, group.HostVars)
+			for _, check := range checks {
+				allChecksSet[check] = struct{}{}
+			}
 		}
 	}
 
-	// Voeg de specifieke host checks toe
-	for _, check := range hostConfig.HostChecks {
-		checkSet[check] = struct{}{}
+	allChecks := make([]string, 0, len(allChecksSet))
+	for check := range allChecksSet {
+		allChecks = append(allChecks, check)
 	}
 
-	checks := make([]string, 0, len(checkSet))
-	for check := range checkSet {
-		checks = append(checks, check)
+	sort.Strings(allChecks)
+
+	// HTML inhoud voor het rapport
+	htmlContent := fmt.Sprintf(`
+	<!DOCTYPE html>
+	<html>
+	<head>
+		<title>%s</title>
+		<style>%s</style>
+	</head>
+	<body>
+	<h1>%s</h1>
+	<p>%s</p>
+	<h2>Overzicht van uitgevoerde checks</h2>
+	<ul>`, config.Report.Title, config.Report.CSS, config.Report.Title, config.Report.Description)
+
+	// Voeg de lijst van alle uitgevoerde checks toe
+	for _, check := range allChecks {
+		htmlContent += fmt.Sprintf("<li>%s</li>", check)
+	}
+	htmlContent += "</ul>"
+
+	// Verwerk elke check
+	for checkName, check := range config.Checks {
+		// Verzamel de waarden voor de geselecteerde check
+		valueCounts := make(map[string]int)
+		passedCount := 0
+		failedCount := 0
+		passedHosts := []CheckResult{}
+		failedHosts := []CheckResult{}
+		for _, result := range results {
+			if result.Check == checkName {
+				valueCounts[result.Value]++
+				if result.Status == "passed" {
+					passedCount++
+					passedHosts = append(passedHosts, result)
+				} else {
+					failedCount++
+					failedHosts = append(failedHosts, result)
+				}
+			}
+		}
+
+		if passedCount == 0 && failedCount == 0 {
+			continue // Sla checks over die niet zijn uitgevoerd
+		}
+
+		// Maak de juiste grafiek op basis van het type
+		var svgFileName string
+		switch check.Graph.Type {
+		case "bar_grouped_by_value":
+			svgFileName, err = plotBarGroupedByValue(checkName, check, results)
+		case "bar_grouped_by_10_percentile":
+			svgFileName, err = plotBarGroupedBy10Percentile(checkName, check, results)
+		default:
+			log.Fatalf("unknown graph type: %s", check.Graph.Type)
+		}
+		if err != nil {
+			return fmt.Errorf("unable to create chart: %v", err)
+		}
+
+		fmt.Println("Chart saved as", svgFileName)
+
+		// Voeg de grafiek en beschrijving toe aan de HTML inhoud
+		htmlContent += fmt.Sprintf(`
+		<h2>%s</h2>
+		<p>%s</p>
+		<p>Passed: %d, Failed: %d</p>
+		<img src="%s" alt="Chart">
+		<h3>Passed Hosts</h3>
+		<ul>`, check.Graph.Title, check.Description, passedCount, failedCount, svgFileName)
+
+		// Voeg de lijst met geslaagde hosts toe
+		for _, result := range passedHosts {
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+		}
+		htmlContent += "</ul>"
+
+		htmlContent += "<h3>Failed Hosts</h3><ul>"
+
+		// Voeg de lijst met mislukte hosts toe
+		for _, result := range failedHosts {
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+		}
+		htmlContent += "</ul>"
 	}
 
-	sort.Strings(checks)
-	return checks
+	// Sluit de HTML inhoud
+	htmlContent += `
+	</body>
+	</html>`
+
+	// Sla de HTML inhoud op in een bestand
+	htmlFileName := "all_charts.html"
+	err = ioutil.WriteFile(htmlFileName, []byte(htmlContent), 0644)
+	if err != nil {
+		return fmt.Errorf("unable to write HTML file: %v", err)
+	}
+
+	fmt.Println("HTML file saved as", htmlFileName)
+	return nil
 }
+
+// Hier voeg je de rest van de functies toe die nodig zijn voor het genereren van de grafieken
+// Bijvoorbeeld de functies plotBarGroupedByValue en plotBarGroupedBy10Percentile
 
 func plotBarGroupedByValue(checkName string, check Check, results []CheckResult) (string, error) {
 	valueCounts := make(map[string]int)
@@ -171,141 +244,34 @@ func plotBarGroupedBy10Percentile(checkName string, check Check, results []Check
 	return svgFileName, nil
 }
 
-func main() {
-	// Laad de configuratie uit het JSON-bestand
-	configData, err := ioutil.ReadFile("config.json")
-	if err != nil {
-		log.Fatalf("unable to read config file: %v", err)
+func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVars map[string]string) []string {
+	checkSet := make(map[string]struct{})
+
+	// Voeg de standaard checks toe
+	for _, check := range config.HostDefaults.HostChecks {
+		checkSet[check] = struct{}{}
 	}
 
-	var config Config
-	if err := json.Unmarshal(configData, &config); err != nil {
-		log.Fatalf("unable to parse config file: %v", err)
-	}
-
-	// Laad de resultaten uit het JSON-bestand
-	data, err := ioutil.ReadFile("results.json")
-	if err != nil {
-		log.Fatalf("unable to read result file: %v", err)
-	}
-
-	var results []CheckResult
-	if err := json.Unmarshal(data, &results); err != nil {
-		log.Fatalf("unable to parse result file: %v", err)
-	}
-
-	// Maak een set van alle uitgevoerde checks
-	allChecksSet := make(map[string]struct{})
-	for hostName, hostConfig := range config.Hosts {
-		checks := getEffectiveChecks(config, hostName, hostConfig)
-		for _, check := range checks {
-			allChecksSet[check] = struct{}{}
-		}
-	}
-
-	allChecks := make([]string, 0, len(allChecksSet))
-	for check := range allChecksSet {
-		allChecks = append(allChecks, check)
-	}
-
-	sort.Strings(allChecks)
-
-	// HTML inhoud voor het rapport
-	htmlContent := fmt.Sprintf(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>%s</title>
-        <style>%s</style>
-    </head>
-    <body>
-    <h1>%s</h1>
-    <p>%s</p>
-    <h2>Overzicht van uitgevoerde checks</h2>
-    <ul>`, config.Report.Title, config.Report.CSS, config.Report.Title, config.Report.Description)
-
-	// Voeg de lijst van alle uitgevoerde checks toe
-	for _, check := range allChecks {
-		htmlContent += fmt.Sprintf("<li>%s</li>", check)
-	}
-	htmlContent += "</ul>"
-
-	// Verwerk elke check
-	for checkName, check := range config.Checks {
-		// Verzamel de waarden voor de geselecteerde check
-		valueCounts := make(map[string]int)
-		passedCount := 0
-		failedCount := 0
-		passedHosts := []CheckResult{}
-		failedHosts := []CheckResult{}
-		for _, result := range results {
-			if result.Check == checkName {
-				valueCounts[result.Value]++
-				if result.Status == "passed" {
-					passedCount++
-					passedHosts = append(passedHosts, result)
-				} else {
-					failedCount++
-					failedHosts = append(failedHosts, result)
-				}
+	// Voeg de template checks toe
+	if hostConfig.HostTemplate != "" {
+		template, exists := config.HostTemplates[hostConfig.HostTemplate]
+		if exists {
+			for _, check := range template.HostChecks {
+				checkSet[check] = struct{}{}
 			}
 		}
-
-		if passedCount == 0 && failedCount == 0 {
-			continue // Sla checks over die niet zijn uitgevoerd
-		}
-
-		// Maak de juiste grafiek op basis van het type
-		var svgFileName string
-		switch check.Graph.Type {
-		case "bar_grouped_by_value":
-			svgFileName, err = plotBarGroupedByValue(checkName, check, results)
-		case "bar_grouped_by_10_percentile":
-			svgFileName, err = plotBarGroupedBy10Percentile(checkName, check, results)
-		default:
-			log.Fatalf("unknown graph type: %s", check.Graph.Type)
-		}
-		if err != nil {
-			log.Fatalf("unable to create chart: %v", err)
-		}
-
-		fmt.Println("Chart saved as", svgFileName)
-
-		// Voeg de grafiek en beschrijving toe aan de HTML inhoud
-		htmlContent += fmt.Sprintf(`
-        <h2>%s</h2>
-        <p>%s</p>
-        <p>Passed: %d, Failed: %d</p>
-        <img src="%s" alt="Chart">
-        <h3>Passed Hosts</h3>
-        <ul>`, check.Graph.Title, check.Description, passedCount, failedCount, svgFileName)
-
-		// Voeg de lijst met geslaagde hosts toe
-		for _, result := range passedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
-		}
-		htmlContent += "</ul>"
-
-		htmlContent += "<h3>Failed Hosts</h3><ul>"
-
-		// Voeg de lijst met mislukte hosts toe
-		for _, result := range failedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
-		}
-		htmlContent += "</ul>"
 	}
 
-	// Sluit de HTML inhoud
-	htmlContent += `
-    </body>
-    </html>`
-
-	// Sla de HTML inhoud op in een bestand
-	htmlFileName := "all_charts.html"
-	err = ioutil.WriteFile(htmlFileName, []byte(htmlContent), 0644)
-	if err != nil {
-		log.Fatalf("unable to write HTML file: %v", err)
+	// Voeg de specifieke host checks toe
+	for _, check := range hostConfig.HostChecks {
+		checkSet[check] = struct{}{}
 	}
 
-	fmt.Println("HTML file saved as", htmlFileName)
+	checks := make([]string, 0, len(checkSet))
+	for check := range checkSet {
+		checks = append(checks, check)
+	}
+
+	sort.Strings(checks)
+	return checks
 }

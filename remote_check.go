@@ -21,6 +21,7 @@ type Config struct {
 	HostTemplates map[string]HostTemplate `json:"host_templates"`
 	Checks        map[string]Check        `json:"checks"`
 	HostGroups    map[string]HostGroup    `json:"host_groups"`
+	Report        Report                  `json:"report"`
 }
 
 type Identity struct {
@@ -47,10 +48,12 @@ type HostGroup struct {
 }
 
 type Check struct {
-	Command   string `json:"command,omitempty"`
-	Service   string `json:"service,omitempty"`
-	FailWhen  string `json:"fail_when"`
-	FailValue string `json:"fail_value"`
+	Command     string      `json:"command,omitempty"`
+	Service     string      `json:"service,omitempty"`
+	FailWhen    string      `json:"fail_when"`
+	FailValue   string      `json:"fail_value"`
+	Description string      `json:"description,omitempty"`
+	Graph       GraphConfig `json:"graph,omitempty"`
 }
 
 type Host struct {
@@ -66,6 +69,17 @@ type CheckResult struct {
 	Status    string `json:"status"`
 	Value     string `json:"value"`
 	Timestamp string `json:"timestamp"`
+}
+
+type Report struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	CSS         string `json:"css"`
+}
+
+type GraphConfig struct {
+	Title string `json:"title"`
+	Type  string `json:"type"`
 }
 
 func getSSHAuthMethod(identity Identity) []ssh.AuthMethod {
@@ -311,22 +325,22 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 	}
 }
 
-func main() {
+func runChecks(configPath string) error {
 	// Laad de configuratie
-	configFile, err := ioutil.ReadFile("config.json")
+	configFile, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Fatalf("unable to read config file: %v", err)
+		return fmt.Errorf("unable to read config file: %v", err)
 	}
 
 	var config Config
 	if err := json.Unmarshal(configFile, &config); err != nil {
-		log.Fatalf("unable to parse config file: %v", err)
+		return fmt.Errorf("unable to parse config file: %v", err)
 	}
 
 	// Maak een logbestand aan voor gedetailleerde logging
 	logFile, err := os.OpenFile("remote_check.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Fatalf("unable to open log file: %v", err)
+		return fmt.Errorf("unable to open log file: %v", err)
 	}
 	defer logFile.Close()
 
@@ -353,11 +367,13 @@ func main() {
 	// Schrijf de resultaten naar een bestand
 	resultFile, err := os.Create("results.json")
 	if err != nil {
-		log.Fatalf("unable to create result file: %v", err)
+		return fmt.Errorf("unable to create result file: %v", err)
 	}
 	defer resultFile.Close()
 
 	if err := json.NewEncoder(resultFile).Encode(results); err != nil {
-		log.Fatalf("unable to write results to file: %v", err)
+		return fmt.Errorf("unable to write results to file: %v", err)
 	}
+
+	return nil
 }
