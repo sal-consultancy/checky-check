@@ -67,3 +67,19 @@ Lokale checks
             "local": true
         }
 ```
+
+multiple values
+
+```
+        "check_url": {
+            "description":"Controleer of er een variabele gezet wordt in deze app",
+            "graph": {
+                "title":"Variabele",
+                "type": "bar_grouped_by_value"
+            },
+            "command": "curl -X GET -o /dev/null -s -w \"%{http_code}\" -I ${url}",
+            "fail_when": "!=",
+            "fail_value": ["200","300"],
+            "local": true
+        }
+```

@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec" // Import os/exec package
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -54,7 +54,7 @@ type Check struct {
 	Service     string      `json:"service,omitempty"`
 	URL         string      `json:"url,omitempty"`
 	FailWhen    string      `json:"fail_when"`
-	FailValue   string      `json:"fail_value"`
+	FailValue   interface{} `json:"fail_value"` // Can be a string or a list of strings
 	Description string      `json:"description,omitempty"`
 	Graph       GraphConfig `json:"graph,omitempty"`
 	Local       bool        `json:"local,omitempty"`
@@ -73,7 +73,7 @@ type CheckResult struct {
 	Status    string            `json:"status"`
 	Value     string            `json:"value"`
 	Timestamp string            `json:"timestamp"`
-	Vars      map[string]string `json:"vars,omitempty"` // Added field to store used variables
+	Vars      map[string]string `json:"vars,omitempty"`
 }
 
 type Report struct {
@@ -165,9 +165,8 @@ func checkURL(url string) (string, error) {
 	return strconv.Itoa(resp.StatusCode), nil
 }
 
-func evaluateCondition(output string, failWhen string, failValue string) bool {
+func evaluateCondition(output string, failWhen string, failValue interface{}) bool {
 	output = strings.TrimSpace(output)
-	failValue = strings.TrimSpace(failValue)
 
 	switch failWhen {
 	case ">":
@@ -176,7 +175,7 @@ func evaluateCondition(output string, failWhen string, failValue string) bool {
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVal, err := strconv.ParseFloat(failValue, 64)
+		failVal, err := strconv.ParseFloat(failValue.(string), 64)
 		if err != nil {
 			log.Printf("Error parsing fail value: %v\n", err)
 			return false
@@ -188,22 +187,38 @@ func evaluateCondition(output string, failWhen string, failValue string) bool {
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVal, err := strconv.ParseFloat(failValue, 64)
+		failVal, err := strconv.ParseFloat(failValue.(string), 64)
 		if err != nil {
 			log.Printf("Error parsing fail value: %v\n", err)
 			return false
 		}
 		return outputVal < failVal
 	case "==", "=":
-		return output == failValue
+		if failValues, ok := failValue.([]interface{}); ok {
+			for _, val := range failValues {
+				if output == val.(string) {
+					return true
+				}
+			}
+			return false
+		}
+		return output == failValue.(string)
 	case "!=":
-		return output != failValue
+		if failValues, ok := failValue.([]interface{}); ok {
+			for _, val := range failValues {
+				if output == val.(string) {
+					return false
+				}
+			}
+			return true
+		}
+		return output != failValue.(string)
 	case "status_code":
-		return output == failValue
+		return output == failValue.(string)
 	case "is":
-		return output == failValue
+		return output == failValue.(string)
 	case "is not":
-		return output != failValue
+		return output != failValue.(string)
 	default:
 		log.Printf("Unknown fail condition: %s\n", failWhen)
 		return false
@@ -390,7 +405,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 			Status:    status,
 			Value:     strings.TrimSpace(result),
 			Timestamp: timestamp,
-			Vars:      combinedVars, // Store the combined variables
+			Vars:      combinedVars,
 		})
 	}
 }
