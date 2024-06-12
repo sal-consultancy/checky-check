@@ -3,7 +3,7 @@
         "id1": {
             "user": "username",
             "key": "id_rsa",
-            "passphrase": "secret"
+            "passphrase": "${env.cc_passphrase}"
         }
     },
     "host_defaults": {

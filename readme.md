@@ -9,6 +9,18 @@ Apple M series
 
 `zip gocheckycheck-win-amd64.zip gocheckycheck-win-amd64.exe`
 
+## Configuration file
+
+Bestaat uit:
+
+- identities
+- host_defaults
+- host_templates
+- checks
+- host_groups
+
+Eventuele geheimen kan je bekend maken als environment variabele.
+
 
 ## Identities
 
