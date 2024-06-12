@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -50,10 +52,12 @@ type HostGroup struct {
 type Check struct {
 	Command     string      `json:"command,omitempty"`
 	Service     string      `json:"service,omitempty"`
+	URL         string      `json:"url,omitempty"`
 	FailWhen    string      `json:"fail_when"`
-	FailValue   string      `json:"fail_value"`
+	FailValue   interface{} `json:"fail_value"` // Can be a string or a list of strings
 	Description string      `json:"description,omitempty"`
 	Graph       GraphConfig `json:"graph,omitempty"`
+	Local       bool        `json:"local,omitempty"`
 }
 
 type Host struct {
@@ -64,11 +68,12 @@ type Host struct {
 }
 
 type CheckResult struct {
-	Host      string `json:"host"`
-	Check     string `json:"check"`
-	Status    string `json:"status"`
-	Value     string `json:"value"`
-	Timestamp string `json:"timestamp"`
+	Host      string            `json:"host"`
+	Check     string            `json:"check"`
+	Status    string            `json:"status"`
+	Value     string            `json:"value"`
+	Timestamp string            `json:"timestamp"`
+	Vars      map[string]string `json:"vars,omitempty"`
 }
 
 type Report struct {
@@ -151,9 +156,17 @@ func checkServiceStatus(user, host string, authMethods []ssh.AuthMethod, service
 	return strings.TrimSpace(result), nil
 }
 
-func evaluateCondition(output string, failWhen string, failValue string) bool {
+func checkURL(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	return strconv.Itoa(resp.StatusCode), nil
+}
+
+func evaluateCondition(output string, failWhen string, failValue interface{}) bool {
 	output = strings.TrimSpace(output)
-	failValue = strings.TrimSpace(failValue)
 
 	switch failWhen {
 	case ">":
@@ -162,7 +175,7 @@ func evaluateCondition(output string, failWhen string, failValue string) bool {
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVal, err := strconv.ParseFloat(failValue, 64)
+		failVal, err := strconv.ParseFloat(failValue.(string), 64)
 		if err != nil {
 			log.Printf("Error parsing fail value: %v\n", err)
 			return false
@@ -174,20 +187,38 @@ func evaluateCondition(output string, failWhen string, failValue string) bool {
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVal, err := strconv.ParseFloat(failValue, 64)
+		failVal, err := strconv.ParseFloat(failValue.(string), 64)
 		if err != nil {
 			log.Printf("Error parsing fail value: %v\n", err)
 			return false
 		}
 		return outputVal < failVal
 	case "==", "=":
-		return output == failValue
+		if failValues, ok := failValue.([]interface{}); ok {
+			for _, val := range failValues {
+				if output == val.(string) {
+					return true
+				}
+			}
+			return false
+		}
+		return output == failValue.(string)
 	case "!=":
-		return output != failValue
+		if failValues, ok := failValue.([]interface{}); ok {
+			for _, val := range failValues {
+				if output == val.(string) {
+					return false
+				}
+			}
+			return true
+		}
+		return output != failValue.(string)
+	case "status_code":
+		return output == failValue.(string)
 	case "is":
-		return output == failValue
+		return output == failValue.(string)
 	case "is not":
-		return output != failValue
+		return output != failValue.(string)
 	default:
 		log.Printf("Unknown fail condition: %s\n", failWhen)
 		return false
@@ -200,6 +231,41 @@ func replaceVariables(command string, vars map[string]string) string {
 		command = strings.ReplaceAll(command, placeholder, value)
 	}
 	return command
+}
+
+func replaceEnvVariables(value string) string {
+	const envPrefix = "${env."
+	for {
+		startIdx := strings.Index(value, envPrefix)
+		if startIdx == -1 {
+			break
+		}
+		endIdx := strings.Index(value[startIdx:], "}")
+		if endIdx == -1 {
+			break
+		}
+		endIdx += startIdx
+		envVar := value[startIdx+len(envPrefix) : endIdx]
+		envVal := os.Getenv(envVar)
+		value = strings.Replace(value, value[startIdx:endIdx+1], envVal, 1)
+	}
+	return value
+}
+
+func loadConfig(configPath string) (Config, error) {
+	var config Config
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return config, fmt.Errorf("unable to read config file: %v", err)
+	}
+
+	configStr := replaceEnvVariables(string(configFile))
+
+	if err := json.Unmarshal([]byte(configStr), &config); err != nil {
+		return config, fmt.Errorf("unable to parse config file: %v", err)
+	}
+
+	return config, nil
 }
 
 func mergeVars(varsList ...map[string]string) map[string]string {
@@ -217,7 +283,6 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
 	logger.Printf("Running checks on host: %s", host)
 
-	// Combineer variabelen in de volgorde: defaults -> template -> groep -> host
 	var combinedVars map[string]string
 	if hostConfig.HostTemplate != "" {
 		template, exists := config.HostTemplates[hostConfig.HostTemplate]
@@ -232,7 +297,6 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
 	logger.Printf("Combined vars for host %s: %v", host, combinedVars)
 
-	// Combineer checks in de volgorde: defaults -> template -> groep -> host
 	var combinedChecks []string
 	combinedChecks = append(combinedChecks, config.HostDefaults.HostChecks...)
 	if hostConfig.HostTemplate != "" {
@@ -245,7 +309,6 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
 	logger.Printf("Combined checks for host %s: %v", host, combinedChecks)
 
-	// Combineer identiteit in de volgorde: defaults -> template -> groep -> host
 	identityName := config.HostDefaults.Identity
 	if hostConfig.HostTemplate != "" {
 		template, exists := config.HostTemplates[hostConfig.HostTemplate]
@@ -287,23 +350,45 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 		var err error
 		var checkFailed bool
 
-		if check.Command != "" {
-			command := replaceVariables(check.Command, combinedVars)
-			logger.Printf("Running command on host %s: %s", host, command)
-			result, err = runCommand(identity.User, host, authMethods, command)
-			if err != nil {
-				logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
-				continue
+		if check.Local {
+			if check.URL != "" {
+				logger.Printf("Checking URL %s", check.URL)
+				result, err = checkURL(check.URL)
+				if err != nil {
+					logger.Printf("Failed to check URL %s: %v\n", check.URL, err)
+					continue
+				}
+				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
+			} else if check.Command != "" {
+				command := replaceVariables(check.Command, combinedVars)
+				logger.Printf("Running local command: %s", command)
+				output, err := runLocalCommand(command)
+				if err != nil {
+					logger.Printf("Failed to run local command %s: %v\n", command, err)
+					continue
+				}
+				result = output
+				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
 			}
-			checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
-		} else if check.Service != "" {
-			logger.Printf("Checking service %s on host %s", check.Service, host)
-			result, err = checkServiceStatus(identity.User, host, authMethods, check.Service)
-			if err != nil {
-				logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
-				continue
+		} else {
+			if check.Command != "" {
+				command := replaceVariables(check.Command, combinedVars)
+				logger.Printf("Running command on host %s: %s", host, command)
+				result, err = runCommand(identity.User, host, authMethods, command)
+				if err != nil {
+					logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
+					continue
+				}
+				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
+			} else if check.Service != "" {
+				logger.Printf("Checking service %s on host %s", check.Service, host)
+				result, err = checkServiceStatus(identity.User, host, authMethods, check.Service)
+				if err != nil {
+					logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
+					continue
+				}
+				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
 			}
-			checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
 		}
 
 		status := "passed"
@@ -314,30 +399,32 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 		timestamp := time.Now().Format("2006-01-02 15:04:05")
 		fmt.Printf("%s - Host: %s - Check: %s - Status: %s - Value: %s\n", timestamp, host, checkName, status, strings.TrimSpace(result))
 
-		// Bewaar het resultaat
 		*results = append(*results, CheckResult{
 			Host:      host,
 			Check:     checkName,
 			Status:    status,
 			Value:     strings.TrimSpace(result),
 			Timestamp: timestamp,
+			Vars:      combinedVars,
 		})
 	}
 }
 
-func runChecks(configPath string) error {
-	// Laad de configuratie
-	configFile, err := ioutil.ReadFile(configPath)
+func runLocalCommand(command string) (string, error) {
+	cmd := exec.Command("bash", "-c", command)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("unable to read config file: %v", err)
+		return "", err
+	}
+	return string(output), nil
+}
+
+func runChecks(configPath string) error {
+	config, err := loadConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("unable to load config: %v", err)
 	}
 
-	var config Config
-	if err := json.Unmarshal(configFile, &config); err != nil {
-		return fmt.Errorf("unable to parse config file: %v", err)
-	}
-
-	// Maak een logbestand aan voor gedetailleerde logging
 	logFile, err := os.OpenFile("remote_check.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to open log file: %v", err)
@@ -346,13 +433,9 @@ func runChecks(configPath string) error {
 
 	logger := log.New(logFile, "", log.LstdFlags)
 
-	// Gebruik een WaitGroup om te wachten tot alle goroutines klaar zijn
 	var wg sync.WaitGroup
-
-	// Verzamelen van resultaten
 	var results []CheckResult
 
-	// Verwerk elke host in de hostgroepen en voer de opgegeven checks parallel uit
 	for _, group := range config.HostGroups {
 		groupVars := group.HostVars
 		for host, hostConfig := range group.Hosts {
@@ -361,10 +444,8 @@ func runChecks(configPath string) error {
 		}
 	}
 
-	// Wacht tot alle goroutines klaar zijn
 	wg.Wait()
 
-	// Schrijf de resultaten naar een bestand
 	resultFile, err := os.Create("results.json")
 	if err != nil {
 		return fmt.Errorf("unable to create result file: %v", err)

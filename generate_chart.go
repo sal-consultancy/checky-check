@@ -15,7 +15,6 @@ import (
 )
 
 func generateReport(configPath string) error {
-	// Voeg hier de inhoud van generate_chart.go toe
 	configData, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("unable to read config file: %v", err)
@@ -26,7 +25,6 @@ func generateReport(configPath string) error {
 		return fmt.Errorf("unable to parse config file: %v", err)
 	}
 
-	// Laad de resultaten uit het JSON-bestand
 	data, err := ioutil.ReadFile("results.json")
 	if err != nil {
 		return fmt.Errorf("unable to read result file: %v", err)
@@ -37,7 +35,6 @@ func generateReport(configPath string) error {
 		return fmt.Errorf("unable to parse result file: %v", err)
 	}
 
-	// Maak een set van alle uitgevoerde checks
 	allChecksSet := make(map[string]struct{})
 	for _, group := range config.HostGroups {
 		for hostName, hostConfig := range group.Hosts {
@@ -55,7 +52,6 @@ func generateReport(configPath string) error {
 
 	sort.Strings(allChecks)
 
-	// HTML inhoud voor het rapport
 	htmlContent := fmt.Sprintf(`
 	<!DOCTYPE html>
 	<html>
@@ -69,15 +65,12 @@ func generateReport(configPath string) error {
 	<h2>Overzicht van uitgevoerde checks</h2>
 	<ul>`, config.Report.Title, config.Report.CSS, config.Report.Title, config.Report.Description)
 
-	// Voeg de lijst van alle uitgevoerde checks toe
 	for _, check := range allChecks {
 		htmlContent += fmt.Sprintf("<li>%s</li>", check)
 	}
 	htmlContent += "</ul>"
 
-	// Verwerk elke check
 	for checkName, check := range config.Checks {
-		// Verzamel de waarden voor de geselecteerde check
 		valueCounts := make(map[string]int)
 		passedCount := 0
 		failedCount := 0
@@ -97,10 +90,9 @@ func generateReport(configPath string) error {
 		}
 
 		if passedCount == 0 && failedCount == 0 {
-			continue // Sla checks over die niet zijn uitgevoerd
+			continue
 		}
 
-		// Maak de juiste grafiek op basis van het type
 		var svgFileName string
 		switch check.Graph.Type {
 		case "bar_grouped_by_value":
@@ -116,36 +108,32 @@ func generateReport(configPath string) error {
 
 		fmt.Println("Chart saved as", svgFileName)
 
-		// Voeg de grafiek en beschrijving toe aan de HTML inhoud
 		htmlContent += fmt.Sprintf(`
 		<h2>%s</h2>
 		<p>%s</p>
+		<pre><code>%s</code></pre>
 		<p>Passed: %d, Failed: %d</p>
 		<img src="%s" alt="Chart">
 		<h3>Passed Hosts</h3>
-		<ul>`, check.Graph.Title, check.Description, passedCount, failedCount, svgFileName)
+		<ul>`, check.Graph.Title, check.Description, check.Command, passedCount, failedCount, svgFileName)
 
-		// Voeg de lijst met geslaagde hosts toe
 		for _, result := range passedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)
 		}
 		htmlContent += "</ul>"
 
 		htmlContent += "<h3>Failed Hosts</h3><ul>"
 
-		// Voeg de lijst met mislukte hosts toe
 		for _, result := range failedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)
 		}
 		htmlContent += "</ul>"
 	}
 
-	// Sluit de HTML inhoud
 	htmlContent += `
 	</body>
 	</html>`
 
-	// Sla de HTML inhoud op in een bestand
 	htmlFileName := "all_charts.html"
 	err = ioutil.WriteFile(htmlFileName, []byte(htmlContent), 0644)
 	if err != nil {
@@ -155,9 +143,6 @@ func generateReport(configPath string) error {
 	fmt.Println("HTML file saved as", htmlFileName)
 	return nil
 }
-
-// Hier voeg je de rest van de functies toe die nodig zijn voor het genereren van de grafieken
-// Bijvoorbeeld de functies plotBarGroupedByValue en plotBarGroupedBy10Percentile
 
 func plotBarGroupedByValue(checkName string, check Check, results []CheckResult) (string, error) {
 	valueCounts := make(map[string]int)
@@ -198,7 +183,7 @@ func plotBarGroupedByValue(checkName string, check Check, results []CheckResult)
 }
 
 func plotBarGroupedBy10Percentile(checkName string, check Check, results []CheckResult) (string, error) {
-	percentiles := make([]int, 11) // 0-10, 11 groepen
+	percentiles := make([]int, 11)
 
 	for _, result := range results {
 		if result.Check == checkName {
@@ -247,12 +232,10 @@ func plotBarGroupedBy10Percentile(checkName string, check Check, results []Check
 func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVars map[string]string) []string {
 	checkSet := make(map[string]struct{})
 
-	// Voeg de standaard checks toe
 	for _, check := range config.HostDefaults.HostChecks {
 		checkSet[check] = struct{}{}
 	}
 
-	// Voeg de template checks toe
 	if hostConfig.HostTemplate != "" {
 		template, exists := config.HostTemplates[hostConfig.HostTemplate]
 		if exists {
@@ -262,7 +245,6 @@ func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVa
 		}
 	}
 
-	// Voeg de specifieke host checks toe
 	for _, check := range hostConfig.HostChecks {
 		checkSet[check] = struct{}{}
 	}
