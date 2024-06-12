@@ -118,14 +118,14 @@ func generateReport(configPath string) error {
 		<ul>`, check.Graph.Title, check.Description, check.Command, passedCount, failedCount, svgFileName)
 
 		for _, result := range passedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)
 		}
 		htmlContent += "</ul>"
 
 		htmlContent += "<h3>Failed Hosts</h3><ul>"
 
 		for _, result := range failedHosts {
-			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s)</li>", result.Host, result.Timestamp, result.Value)
+			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)
 		}
 		htmlContent += "</ul>"
 	}

@@ -68,11 +68,12 @@ type Host struct {
 }
 
 type CheckResult struct {
-	Host      string `json:"host"`
-	Check     string `json:"check"`
-	Status    string `json:"status"`
-	Value     string `json:"value"`
-	Timestamp string `json:"timestamp"`
+	Host      string            `json:"host"`
+	Check     string            `json:"check"`
+	Status    string            `json:"status"`
+	Value     string            `json:"value"`
+	Timestamp string            `json:"timestamp"`
+	Vars      map[string]string `json:"vars,omitempty"` // Added field to store used variables
 }
 
 type Report struct {
@@ -389,6 +390,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 			Status:    status,
 			Value:     strings.TrimSpace(result),
 			Timestamp: timestamp,
+			Vars:      combinedVars, // Store the combined variables
 		})
 	}
 }
