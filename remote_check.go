@@ -202,6 +202,41 @@ func replaceVariables(command string, vars map[string]string) string {
 	return command
 }
 
+func replaceEnvVariables(value string) string {
+	const envPrefix = "${env."
+	for {
+		startIdx := strings.Index(value, envPrefix)
+		if startIdx == -1 {
+			break
+		}
+		endIdx := strings.Index(value[startIdx:], "}")
+		if endIdx == -1 {
+			break
+		}
+		endIdx += startIdx
+		envVar := value[startIdx+len(envPrefix) : endIdx]
+		envVal := os.Getenv(envVar)
+		value = strings.Replace(value, value[startIdx:endIdx+1], envVal, 1)
+	}
+	return value
+}
+
+func loadConfig(configPath string) (Config, error) {
+	var config Config
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return config, fmt.Errorf("unable to read config file: %v", err)
+	}
+
+	configStr := replaceEnvVariables(string(configFile))
+
+	if err := json.Unmarshal([]byte(configStr), &config); err != nil {
+		return config, fmt.Errorf("unable to parse config file: %v", err)
+	}
+
+	return config, nil
+}
+
 func mergeVars(varsList ...map[string]string) map[string]string {
 	result := make(map[string]string)
 	for _, vars := range varsList {
@@ -326,15 +361,9 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 }
 
 func runChecks(configPath string) error {
-	// Laad de configuratie
-	configFile, err := ioutil.ReadFile(configPath)
+	config, err := loadConfig(configPath)
 	if err != nil {
-		return fmt.Errorf("unable to read config file: %v", err)
-	}
-
-	var config Config
-	if err := json.Unmarshal(configFile, &config); err != nil {
-		return fmt.Errorf("unable to parse config file: %v", err)
+		return fmt.Errorf("unable to load config: %v", err)
 	}
 
 	// Maak een logbestand aan voor gedetailleerde logging
