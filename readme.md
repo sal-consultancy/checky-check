@@ -21,11 +21,9 @@ Bestaat uit:
 
 Eventuele geheimen kan je bekend maken als environment variabele.
 
-
 ## Identities
 
 Je kan op drie manieren identities aanbrengen:
-
 
 SSH Private Key Authentication
 ```
@@ -51,3 +49,21 @@ Username en wachtword
     "password": "password"
 }
 ```        
+
+## Type checks
+
+Lokale checks
+
+```
+        "check_url": {
+            "description":"Controleer of er een variabele gezet wordt in deze app",
+            "graph": {
+                "title":"Variabele",
+                "type": "bar_grouped_by_value"
+            },
+            "command": "curl -X GET -o /dev/null -s -w \"%{http_code}\" -I ${url}",
+            "fail_when": "!=",
+            "fail_value": "200",
+            "local": true
+        }
+```
