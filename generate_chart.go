@@ -115,7 +115,7 @@ func generateReport(configPath string) error {
 		<p>Passed: %d, Failed: %d</p>
 		<img src="%s" alt="Chart">
 		<h3>Passed Hosts</h3>
-		<ul>`, check.Graph.Title, check.Description, check.Command, passedCount, failedCount, svgFileName)
+		<ul>`, check.Title, check.Description, check.Command, passedCount, failedCount, svgFileName)
 
 		for _, result := range passedHosts {
 			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)

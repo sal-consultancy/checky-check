@@ -50,6 +50,7 @@ type HostGroup struct {
 }
 
 type Check struct {
+	Title       string      `json:"title"`
 	Command     string      `json:"command,omitempty"`
 	Service     string      `json:"service,omitempty"`
 	URL         string      `json:"url,omitempty"`
