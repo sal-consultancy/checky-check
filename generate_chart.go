@@ -83,6 +83,7 @@ type Report struct {
 type GraphConfig struct {
 	Title string `json:"title"`
 	Type  string `json:"type"`
+	Show  bool   `json:"show,omitempty"`
 }
 
 func generateReport(configPath string) error {
@@ -165,28 +166,33 @@ func generateReport(configPath string) error {
 		}
 
 		var svgFileName string
-		switch check.Graph.Type {
-		case "bar_grouped_by_value":
-			svgFileName, err = plotBarGroupedByValue(checkName, check, results)
-		case "bar_grouped_by_10_percentile":
-			svgFileName, err = plotBarGroupedBy10Percentile(checkName, check, results)
-		default:
-			log.Fatalf("unknown graph type: %s", check.Graph.Type)
-		}
-		if err != nil {
-			return fmt.Errorf("unable to create chart: %v", err)
-		}
+		if check.Graph.Show {
+			switch check.Graph.Type {
+			case "bar_grouped_by_value":
+				svgFileName, err = plotBarGroupedByValue(checkName, check, results)
+			case "bar_grouped_by_10_percentile":
+				svgFileName, err = plotBarGroupedBy10Percentile(checkName, check, results)
+			default:
+				log.Fatalf("unknown graph type: %s", check.Graph.Type)
+			}
+			if err != nil {
+				return fmt.Errorf("unable to create chart: %v", err)
+			}
 
-		fmt.Println("Chart saved as", svgFileName)
+			fmt.Println("Chart saved as", svgFileName)
+		}
 
 		htmlContent += fmt.Sprintf(`
 		<h2>%s</h2>
 		<p>%s</p>
 		<pre><code>%s</code></pre>
-		<p>Passed: %d, Failed: %d</p>
-		<img src="%s" alt="Chart">
-		<h3>Passed Hosts</h3>
-		<ul>`, check.Title, check.Description, check.Command, passedCount, failedCount, svgFileName)
+		<p>Passed: %d, Failed: %d</p>`, check.Title, check.Description, check.Command, passedCount, failedCount)
+
+		if check.Graph.Show {
+			htmlContent += fmt.Sprintf(`<img src="%s" alt="Chart">`, svgFileName)
+		}
+
+		htmlContent += `<h3>Passed Hosts</h3><ul>`
 
 		for _, result := range passedHosts {
 			htmlContent += fmt.Sprintf("<li>%s (Datum: %s, Waarde: %s, Vars: %v)</li>", result.Host, result.Timestamp, result.Value, result.Vars)
@@ -328,3 +334,5 @@ func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVa
 	sort.Strings(checks)
 	return checks
 }
+
+

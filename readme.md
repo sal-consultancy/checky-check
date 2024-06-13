@@ -68,6 +68,21 @@ Lokale checks
         }
 ```
 
+Check een service
+
+```
+        "check_firewall_running": {
+            "description":"Controleer of er een variabele gezet wordt in deze app",
+            "graph": {
+                "title":"Variabele",
+                "type": "bar_grouped_by_value"
+            },
+            "service": "ufw",
+            "fail_when": "=",
+            "fail_value": "0"
+        },
+```
+
 multiple values
 
 ```
