@@ -8,10 +8,6 @@ import (
 	"math"
 	"sort"
 	"strconv"
-
-	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 )
 
 type CheckResult struct {
@@ -81,9 +77,10 @@ type Report struct {
 }
 
 type GraphConfig struct {
-	Title string `json:"title"`
-	Type  string `json:"type"`
-	Show  bool   `json:"show,omitempty"`
+	Title  string `json:"title"`
+	Type   string `json:"type"`
+	Show   bool   `json:"show,omitempty"`
+	Legend bool   `json:"legend,omitempty"`
 }
 
 func generateReport(configPath string) error {
@@ -129,7 +126,16 @@ func generateReport(configPath string) error {
 	<html>
 	<head>
 		<title>%s</title>
-		<style>%s</style>
+		<style>
+			%s
+			.chart-container {
+				width: 400px;
+				margin: auto;
+			}
+		</style>
+		<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-roughness"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	
 	</head>
 	<body>
 	<h1>%s</h1>
@@ -165,13 +171,15 @@ func generateReport(configPath string) error {
 			continue
 		}
 
-		var svgFileName string
+		chartData := ""
 		if check.Graph.Show {
 			switch check.Graph.Type {
 			case "bar_grouped_by_value":
-				svgFileName, err = plotBarGroupedByValue(checkName, check, results)
+				chartData, err = generateBarGroupedByValueChart(checkName, check, valueCounts)
 			case "bar_grouped_by_10_percentile":
-				svgFileName, err = plotBarGroupedBy10Percentile(checkName, check, results)
+				chartData, err = generateBarGroupedBy10PercentileChart(checkName, check, results)
+			case "pie_grouped_by_value":
+				chartData, err = generatePieGroupedByValueChart(checkName, check, valueCounts)
 			default:
 				log.Fatalf("unknown graph type: %s", check.Graph.Type)
 			}
@@ -179,7 +187,7 @@ func generateReport(configPath string) error {
 				return fmt.Errorf("unable to create chart: %v", err)
 			}
 
-			fmt.Println("Chart saved as", svgFileName)
+			fmt.Println("Chart data generated for", checkName)
 		}
 
 		htmlContent += fmt.Sprintf(`
@@ -189,7 +197,7 @@ func generateReport(configPath string) error {
 		<p>Passed: %d, Failed: %d</p>`, check.Title, check.Description, check.Command, passedCount, failedCount)
 
 		if check.Graph.Show {
-			htmlContent += fmt.Sprintf(`<img src="%s" alt="Chart">`, svgFileName)
+			htmlContent += chartData
 		}
 
 		htmlContent += `<h3>Passed Hosts</h3><ul>`
@@ -221,45 +229,60 @@ func generateReport(configPath string) error {
 	return nil
 }
 
-func plotBarGroupedByValue(checkName string, check Check, results []CheckResult) (string, error) {
-	valueCounts := make(map[string]int)
-	for _, result := range results {
-		if result.Check == checkName {
-			valueCounts[result.Value]++
-		}
-	}
-
+func generateBarGroupedByValueChart(checkName string, check Check, valueCounts map[string]int) (string, error) {
 	labels := make([]string, 0, len(valueCounts))
-	counts := make([]float64, 0, len(valueCounts))
+	counts := make([]int, 0, len(valueCounts))
 	for label, count := range valueCounts {
 		labels = append(labels, label)
-		counts = append(counts, float64(count))
+		counts = append(counts, count)
 	}
 
-	p := plot.New()
-	p.Title.Text = check.Graph.Title
-	p.X.Label.Text = "Value"
-	p.Y.Label.Text = "Count"
+	chartData := fmt.Sprintf(`
+	<div class="chart-container">
+		<canvas id="%s" width="400" height="300"></canvas>
+	</div>
+	<script>
+		var ctx = document.getElementById('%s').getContext('2d');
+		var chart = new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: %s,
+				datasets: [{
+					label: '%s',
+					data: %s,
+					backgroundColor: 'rgba(75, 192, 192, 0.2)',
+					borderColor: 'rgba(75, 192, 192, 1)',
+					borderWidth: 1,
+					barPercentage: 0.5,
+					categoryPercentage: 0.5
+				}]
+			},
+			options: {
+				plugins: {
+					legend: {
+						display: %t
+					},
+					roughness: {
+						disabled: false,
+						fillStyle: 'hachure',
+						fillWeight: 0.8,
+						roughness: 1.2,
+						hachureGap: 2.8
+					  }
+				},
+				scales: {
+					y: {
+						beginAtZero: true
+					}
+				 }
+			}
+		});
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), check.Graph.Legend)
 
-	barWidth := vg.Points(20)
-	bars, err := plotter.NewBarChart(plotter.Values(counts), barWidth)
-	if err != nil {
-		return "", err
-	}
-
-	p.Add(bars)
-	p.NominalX(labels...)
-
-	svgFileName := fmt.Sprintf("%s.svg", checkName)
-	err = p.Save(6*vg.Inch, 4*vg.Inch, svgFileName)
-	if err != nil {
-		return "", err
-	}
-
-	return svgFileName, nil
+	return chartData, nil
 }
 
-func plotBarGroupedBy10Percentile(checkName string, check Check, results []CheckResult) (string, error) {
+func generateBarGroupedBy10PercentileChart(checkName string, check Check, results []CheckResult) (string, error) {
 	percentiles := make([]int, 11)
 
 	for _, result := range results {
@@ -274,36 +297,121 @@ func plotBarGroupedBy10Percentile(checkName string, check Check, results []Check
 	}
 
 	labels := make([]string, 11)
-	counts := make([]float64, 11)
+	counts := make([]int, 11)
 	for i := 0; i <= 10; i++ {
 		labels[i] = fmt.Sprintf("%d-%d%%", i*10, (i+1)*10-1)
 		if i == 10 {
 			labels[i] = "100%"
 		}
-		counts[i] = float64(percentiles[i])
+		counts[i] = percentiles[i]
 	}
 
-	p := plot.New()
-	p.Title.Text = check.Graph.Title
-	p.X.Label.Text = "Percentage Range"
-	p.Y.Label.Text = "Count"
+	chartData := fmt.Sprintf(`
+	<div class="chart-container">
+		<canvas id="%s" width="400" height="300"></canvas>
+	</div>
+	<script>
+		var ctx = document.getElementById('%s').getContext('2d');
+		var chart = new Chart(ctx, {
+			type: 'bar',
+			data: {
+				labels: %s,
+				datasets: [{
+					label: '%s',
+					data: %s,
+					backgroundColor: 'rgba(153, 102, 255, 0.2)',
+					borderColor: 'rgba(153, 102, 255, 1)',
+					borderWidth: 1,
+					barPercentage: 0.5,
+					categoryPercentage: 0.5
+				}]
+			},
+			options: {
+				plugins: {
+					legend: {
+						display: %t
+					},
+					roughness: {
+						disabled: false,
+						fillStyle: 'hachure',
+						fillWeight: 0.8,
+						roughness: 1.2,
+						hachureGap: 2.8
+					  }
+				},
+				scales: {
+					y: {
+						beginAtZero: true
+					}
+				}
+			}
+		});
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), check.Graph.Legend)
 
-	barWidth := vg.Points(20)
-	bars, err := plotter.NewBarChart(plotter.Values(counts), barWidth)
+	return chartData, nil
+}
+
+func generatePieGroupedByValueChart(checkName string, check Check, valueCounts map[string]int) (string, error) {
+	labels := make([]string, 0, len(valueCounts))
+	counts := make([]int, 0, len(valueCounts))
+	for label, count := range valueCounts {
+		labels = append(labels, label)
+		counts = append(counts, count)
+	}
+
+	colors := generateColorPalette(len(labels))
+
+	chartData := fmt.Sprintf(`
+	<div class="chart-container">
+		<canvas id="%s" width="400" height="300"></canvas>
+	</div>
+	<script>
+		var ctx = document.getElementById('%s').getContext('2d');
+		var chart = new Chart(ctx, {
+			type: 'pie',
+			data: {
+				labels: %s,
+				datasets: [{
+					label: '%s',
+					data: %s,
+					backgroundColor: %s
+				}]
+			},
+			options: {
+				plugins: {
+					legend: {
+						display: %t
+					},
+					roughness: {
+						disabled: false,
+						fillStyle: 'hachure',
+						fillWeight: 0.8,
+						roughness: 1.2,
+						hachureGap: 2.8
+					  }
+				},
+				responsive: true
+			}
+		});
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), marshalJSON(colors), check.Graph.Legend)
+
+	return chartData, nil
+}
+
+func generateColorPalette(size int) []string {
+	colors := make([]string, size)
+	for i := 0; i < size; i++ {
+		colors[i] = fmt.Sprintf("hsl(%d, 70%%, 50%%)", int(float64(i)/float64(size)*360))
+	}
+	return colors
+}
+
+func marshalJSON(v interface{}) string {
+	data, err := json.Marshal(v)
 	if err != nil {
-		return "", err
+		log.Fatalf("unable to marshal JSON: %v", err)
 	}
-
-	p.Add(bars)
-	p.NominalX(labels...)
-
-	svgFileName := fmt.Sprintf("%s.svg", checkName)
-	err = p.Save(6*vg.Inch, 4*vg.Inch, svgFileName)
-	if err != nil {
-		return "", err
-	}
-
-	return svgFileName, nil
+	return string(data)
 }
 
 func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVars map[string]string) []string {
@@ -334,5 +442,4 @@ func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVa
 	sort.Strings(checks)
 	return checks
 }
-
 
