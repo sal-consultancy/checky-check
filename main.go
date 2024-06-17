@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"flag"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -26,7 +27,12 @@ func main() {
 	}
 
 	// Serve de build directory
-	http.Handle("/", http.FileServer(http.FS(content)))
+	subFS, err := fs.Sub(content, "frontend/build")
+	if err != nil {
+		log.Fatalf("Failed to create sub filesystem: %v", err)
+	}
+
+	http.Handle("/", http.FileServer(http.FS(subFS)))
 
 	// Endpoint voor de results file
 	http.HandleFunc("/results", func(w http.ResponseWriter, r *http.Request) {

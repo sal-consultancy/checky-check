@@ -19,6 +19,19 @@ const CheckReport = ({ results, checks, theme }) => {
     return acc;
   }, {});
 
+  const allHosts = Object.keys(results).map(host => {
+    const hostResults = results[host];
+    return {
+      host,
+      results: Object.keys(hostResults).map(checkName => ({
+        checkName,
+        status: hostResults[checkName].status,
+        value: hostResults[checkName].value,
+        timestamp: hostResults[checkName].timestamp
+      }))
+    };
+  });
+
   return (
     <div className="check-report">
       <h2>Samenvatting</h2>
@@ -41,7 +54,31 @@ const CheckReport = ({ results, checks, theme }) => {
         </tbody>
       </table>
 
-
+      <h2>Alle Hosts</h2>
+      <table className="table is-striped is-bordered">
+        <thead>
+          <tr>
+            <th>Host</th>
+            <th>Testnaam</th>
+            <th>Status</th>
+            <th>Value</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody>
+          {allHosts.map(({ host, results }) =>
+            results.map((result, index) => (
+              <tr key={`${host}-${result.checkName}-${index}`}>
+                <td>{index === 0 ? host : ''}</td>
+                <td>{checks[result.checkName].title}</td>
+                <td>{result.status}</td>
+                <td>{result.value}</td>
+                <td>{result.timestamp}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };

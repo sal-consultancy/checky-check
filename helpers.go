@@ -5,6 +5,8 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"os"
+    "regexp"
 )
 
 func evaluateCondition(output string, failWhen string, failValue interface{}) bool {
@@ -81,4 +83,23 @@ func mergeVars(varsList ...map[string]string) map[string]string {
 		}
 	}
 	return result
+}
+
+func substituteEnvVariables(configStr string) (string, error) {
+    re := regexp.MustCompile(`\$\{env\.([a-zA-Z_][a-zA-Z0-9_]*)\}`)
+    matches := re.FindAllStringSubmatch(configStr, -1)
+
+    for _, match := range matches {
+        if len(match) != 2 {
+            continue
+        }
+        envVar := match[1]
+        envValue := os.Getenv(envVar)
+        if envValue == "" {
+            return "", fmt.Errorf("environment variable %s not set", envVar)
+        }
+        configStr = strings.ReplaceAll(configStr, match[0], envValue)
+    }
+
+    return configStr, nil
 }

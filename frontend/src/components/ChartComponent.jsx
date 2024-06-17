@@ -28,7 +28,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
     ];
 
     chartInstanceRef.current = new Chart(chartRef.current, {
-      type: type,
+      type: type === 'bar_grouped_by_10_percentile' ? 'bar' : type,
       data: {
         labels: labels,
         datasets: datasets,
@@ -54,6 +54,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         },
         scales: {
           x: {
+            display: type !== 'pie',
             grid: {
               display: false,
             },
@@ -64,6 +65,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
             },
           },
           y: {
+            display: type !== 'pie',
             grid: {
               display: false,
             },
@@ -86,8 +88,8 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
   }, [data, labels, theme, type, colors]);
 
   return (
-    <div style={{ width: type === 'pie' ? '50%' : '100%' }}>
-      <h3>{title}</h3>
+    <div style={{ width: type === 'pie' ? '40%' : '100%' }}>
+      <h3 className='write'>{title}</h3>
       <canvas ref={chartRef}></canvas>
     </div>
   );
