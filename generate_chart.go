@@ -10,79 +10,6 @@ import (
 	"strconv"
 )
 
-type CheckResult struct {
-	Host      string            `json:"host"`
-	Check     string            `json:"check"`
-	Status    string            `json:"status"`
-	Value     string            `json:"value"`
-	Timestamp string            `json:"timestamp"`
-	Vars      map[string]string `json:"vars,omitempty"`
-}
-
-type Config struct {
-	Identities    map[string]Identity     `json:"identities"`
-	HostDefaults  HostDefaults            `json:"host_defaults"`
-	HostTemplates map[string]HostTemplate `json:"host_templates"`
-	Checks        map[string]Check        `json:"checks"`
-	HostGroups    map[string]HostGroup    `json:"host_groups"`
-	Report        Report                  `json:"report"`
-}
-
-type Identity struct {
-	User       string `json:"user"`
-	Key        string `json:"key,omitempty"`
-	Passphrase string `json:"passphrase,omitempty"`
-	Password   string `json:"password,omitempty"`
-}
-
-type HostDefaults struct {
-	Identity   string            `json:"identity"`
-	HostVars   map[string]string `json:"host_vars"`
-	HostChecks []string          `json:"host_checks"`
-}
-
-type HostTemplate struct {
-	HostVars   map[string]string `json:"host_vars,omitempty"`
-	HostChecks []string          `json:"host_checks"`
-}
-
-type HostGroup struct {
-	HostVars map[string]string `json:"host_vars,omitempty"`
-	Hosts    map[string]Host   `json:"hosts"`
-}
-
-type Check struct {
-	Title       string      `json:"title"`
-	Command     string      `json:"command,omitempty"`
-	Service     string      `json:"service,omitempty"`
-	URL         string      `json:"url,omitempty"`
-	FailWhen    string      `json:"fail_when"`
-	FailValue   interface{} `json:"fail_value"` // Can be a string or a list of strings
-	Description string      `json:"description,omitempty"`
-	Graph       GraphConfig `json:"graph,omitempty"`
-	Local       bool        `json:"local,omitempty"`
-}
-
-type Host struct {
-	Identity     string            `json:"identity,omitempty"`
-	HostTemplate string            `json:"host_template,omitempty"`
-	HostVars     map[string]string `json:"host_vars,omitempty"`
-	HostChecks   []string          `json:"host_checks"`
-}
-
-type Report struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	CSS         string `json:"css"`
-}
-
-type GraphConfig struct {
-	Title  string `json:"title"`
-	Type   string `json:"type"`
-	Show   bool   `json:"show,omitempty"`
-	Legend bool   `json:"legend,omitempty"`
-}
-
 func generateReport(configPath string) error {
 	configData, err := ioutil.ReadFile(configPath)
 	if err != nil {
@@ -99,23 +26,13 @@ func generateReport(configPath string) error {
 		return fmt.Errorf("unable to read result file: %v", err)
 	}
 
-	var results []CheckResult
-	if err := json.Unmarshal(data, &results); err != nil {
+	var resultFile ResultFile
+	if err := json.Unmarshal(data, &resultFile); err != nil {
 		return fmt.Errorf("unable to parse result file: %v", err)
 	}
 
-	allChecksSet := make(map[string]struct{})
-	for _, group := range config.HostGroups {
-		for hostName, hostConfig := range group.Hosts {
-			checks := getEffectiveChecks(config, hostName, hostConfig, group.HostVars)
-			for _, check := range checks {
-				allChecksSet[check] = struct{}{}
-			}
-		}
-	}
-
-	allChecks := make([]string, 0, len(allChecksSet))
-	for check := range allChecksSet {
+	allChecks := make([]string, 0, len(resultFile.Checks))
+	for check := range resultFile.Checks {
 		allChecks = append(allChecks, check)
 	}
 
@@ -133,9 +50,7 @@ func generateReport(configPath string) error {
 				margin: auto;
 			}
 		</style>
-		<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-roughness"></script>
 		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-	
 	</head>
 	<body>
 	<h1>%s</h1>
@@ -148,14 +63,15 @@ func generateReport(configPath string) error {
 	}
 	htmlContent += "</ul>"
 
-	for checkName, check := range config.Checks {
+	for checkName, check := range resultFile.Checks {
 		valueCounts := make(map[string]int)
 		passedCount := 0
 		failedCount := 0
 		passedHosts := []CheckResult{}
 		failedHosts := []CheckResult{}
-		for _, result := range results {
-			if result.Check == checkName {
+		for host, hostResults := range resultFile.Results {
+			result, exists := hostResults[checkName]
+			if exists {
 				valueCounts[result.Value]++
 				if result.Status == "passed" {
 					passedCount++
@@ -177,7 +93,7 @@ func generateReport(configPath string) error {
 			case "bar_grouped_by_value":
 				chartData, err = generateBarGroupedByValueChart(checkName, check, valueCounts)
 			case "bar_grouped_by_10_percentile":
-				chartData, err = generateBarGroupedBy10PercentileChart(checkName, check, results)
+				chartData, err = generateBarGroupedBy10PercentileChart(checkName, check, resultFile.Results)
 			case "pie_grouped_by_value":
 				chartData, err = generatePieGroupedByValueChart(checkName, check, valueCounts)
 			default:
@@ -258,35 +174,24 @@ func generateBarGroupedByValueChart(checkName string, check Check, valueCounts m
 				}]
 			},
 			options: {
-				plugins: {
-					legend: {
-						display: %t
-					},
-					roughness: {
-						disabled: false,
-						fillStyle: 'hachure',
-						fillWeight: 0.8,
-						roughness: 1.2,
-						hachureGap: 2.8
-					  }
-				},
 				scales: {
 					y: {
 						beginAtZero: true
 					}
-				 }
+				}
 			}
 		});
-	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), check.Graph.Legend)
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts))
 
 	return chartData, nil
 }
 
-func generateBarGroupedBy10PercentileChart(checkName string, check Check, results []CheckResult) (string, error) {
+func generateBarGroupedBy10PercentileChart(checkName string, check Check, results map[string]map[string]CheckResult) (string, error) {
 	percentiles := make([]int, 11)
 
-	for _, result := range results {
-		if result.Check == checkName {
+	for _, hostResults := range results {
+		result, exists := hostResults[checkName]
+		if exists {
 			value, err := strconv.Atoi(result.Value)
 			if err != nil {
 				return "", err
@@ -327,18 +232,6 @@ func generateBarGroupedBy10PercentileChart(checkName string, check Check, result
 				}]
 			},
 			options: {
-				plugins: {
-					legend: {
-						display: %t
-					},
-					roughness: {
-						disabled: false,
-						fillStyle: 'hachure',
-						fillWeight: 0.8,
-						roughness: 1.2,
-						hachureGap: 2.8
-					  }
-				},
 				scales: {
 					y: {
 						beginAtZero: true
@@ -346,7 +239,7 @@ func generateBarGroupedBy10PercentileChart(checkName string, check Check, result
 				}
 			}
 		});
-	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), check.Graph.Legend)
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts))
 
 	return chartData, nil
 }
@@ -378,22 +271,27 @@ func generatePieGroupedByValueChart(checkName string, check Check, valueCounts m
 				}]
 			},
 			options: {
+				responsive: true,
 				plugins: {
 					legend: {
-						display: %t
+						position: 'top',
 					},
-					roughness: {
-						disabled: false,
-						fillStyle: 'hachure',
-						fillWeight: 0.8,
-						roughness: 1.2,
-						hachureGap: 2.8
-					  }
-				},
-				responsive: true
+					tooltip: {
+						callbacks: {
+							label: function(context) {
+								var label = context.label || '';
+								if (label) {
+									label += ': ';
+								}
+								label += context.raw;
+								return label;
+							}
+						}
+					}
+				}
 			}
 		});
-	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), marshalJSON(colors), check.Graph.Legend)
+	</script>`, checkName, checkName, marshalJSON(labels), check.Graph.Title, marshalJSON(counts), marshalJSON(colors))
 
 	return chartData, nil
 }
@@ -443,3 +341,10 @@ func getEffectiveChecks(config Config, hostName string, hostConfig Host, groupVa
 	return checks
 }
 
+func main() {
+	configPath := "config.json"
+	err := generateReport(configPath)
+	if err != nil {
+		log.Fatalf("Error generating report: %v", err)
+	}
+}
