@@ -21,6 +21,12 @@
             "fail_when": ">",
             "fail_value": "90"
         },
+        "check_url": {
+            "command": "curl -X GET -o /dev/null -s -w '%{http_code}' -I ${url} --insecure",
+            "fail_when": "!=",
+            "fail_value": ["200","302"],
+            "local": true
+        },        
         "check_firewall_running": {
             "description":"Controleer of er een variabele gezet wordt in deze app",
             "graph": {

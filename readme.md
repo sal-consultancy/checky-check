@@ -50,6 +50,12 @@ Username en wachtword
 }
 ```        
 
+## Opstarten
+
+`checkycheck.exe -mode=serve -port=8071 -config=config.json`
+
+
+
 ## Type checks
 
 Lokale checks

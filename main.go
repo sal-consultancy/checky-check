@@ -8,8 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"encoding/json"
-	"strings"
+
 )
 
 // Embed de gehele build directory
@@ -27,8 +26,7 @@ func main() {
 	switch *mode {
 	case "check":
 		runChecks(*configPath)
-	case "report":
-		generateReport(*configPath)
+
 	case "serve":
 		serve(*port)
 	default:
@@ -65,46 +63,3 @@ func serve(port int) {
 	}
 }
 
-
-
-func generateReport(configPath string) {
-	configData, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		log.Fatalf("unable to read config file: %v", err)
-	}
-
-	var config struct {
-		Checks map[string]Check `json:"checks"`
-	}
-	if err := json.Unmarshal(configData, &config); err != nil {
-		log.Fatalf("unable to parse config file: %v", err)
-	}
-
-	resultsData, err := ioutil.ReadFile("results.json")
-	if err != nil {
-		log.Fatalf("unable to read results file: %v", err)
-	}
-
-	var results map[string]map[string]CheckResult
-	if err := json.Unmarshal(resultsData, &results); err != nil {
-		log.Fatalf("unable to parse results file: %v", err)
-	}
-
-	resultsJSON, err := json.Marshal(results)
-	if err != nil {
-		log.Fatalf("unable to marshal results to JSON: %v", err)
-	}
-
-	htmlContent, err := content.ReadFile("frontend/build/index.html")
-	if err != nil {
-		log.Fatalf("unable to read index.html: %v", err)
-	}
-
-	reportContent := strings.Replace(string(htmlContent), "window.__CHECK_RESULTS__ = null;", fmt.Sprintf("window.__CHECK_RESULTS__ = %s;", resultsJSON), 1)
-
-	if err := ioutil.WriteFile("report.html", []byte(reportContent), 0644); err != nil {
-		log.Fatalf("unable to write report file: %v", err)
-	}
-
-	log.Println("Report generated as report.html")
-}

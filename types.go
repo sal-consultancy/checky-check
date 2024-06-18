@@ -78,3 +78,4 @@ type ResultFile struct {
 	Checks  map[string]Check                    `json:"checks"`
 	Results map[string]map[string]CheckResult `json:"results"`
 }
+

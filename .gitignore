@@ -5,3 +5,4 @@ results.json
 *.exe
 *.zip
 *.log
+tmp/
