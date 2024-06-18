@@ -43,37 +43,40 @@ const CheckReport = ({ results, checks, theme }) => {
       {Object.keys(summary).map((checkName, index) => {
         const check = checks[checkName];
 
-        const graphData = summary[checkName].details.reduce((acc, detail) => {
-          if (check.graph?.type === 'bar_grouped_by_10_percentile') {
-            const value = parseInt(detail.value, 10);
-            const bucket = Math.min(Math.floor(value / 10), 10);
-            const label = `${bucket * 10}-${bucket * 10 + 9}%`;
-            acc[label] = (acc[label] || 0) + 1;
-          } else {
-            acc[detail.value] = (acc[detail.value] || 0) + 1;
-          }
-          return acc;
-        }, {});
+        let graphData;
+        if (check.graph.type === 'bar_grouped_by_10_percentile') {
+          graphData = new Array(11).fill(0).map((_, i) => ({
+            value: 0,
+            failed: 0,
+          }));
 
-        // Ensure all 10-percentile buckets are included
-        if (check.graph?.type === 'bar_grouped_by_10_percentile') {
-          for (let i = 0; i <= 10; i++) {
-            const label = i === 10 ? '100%' : `${i * 10}-${i * 10 + 9}%`;
-            if (!graphData[label]) {
-              graphData[label] = 0;
+          summary[checkName].details.forEach(detail => {
+            const percentile = Math.min(Math.floor(detail.value / 10), 10);
+            graphData[percentile].value += 1;
+            if (detail.status === 'failed') {
+              graphData[percentile].failed += 1;
             }
-          }
+          });
+        } else {
+          graphData = summary[checkName].details.reduce((acc, detail) => {
+            acc[detail.value] = acc[detail.value] || { value: 0, failed: 0 };
+            acc[detail.value].value += 1;
+            if (detail.status === 'failed') {
+              acc[detail.value].failed += 1;
+            }
+            return acc;
+          }, {});
         }
 
-        const labels = Object.keys(graphData).sort((a, b) => {
-          if (a === '100%') return 1;
-          if (b === '100%') return -1;
-          return parseInt(a) - parseInt(b);
-        });
-        const data = labels.map(label => ({
-          value: graphData[label],
-          failed: summary[checkName].details.filter(d => d.value === label && d.status === 'failed').length
-        }));
+        const labels = check.graph.type === 'bar_grouped_by_10_percentile'
+          ? ['0-9%', '10-19%', '20-29%', '30-39%', '40-49%', '50-59%', '60-69%', '70-79%', '80-89%', '90-99%', '100%']
+          : Object.keys(graphData);
+
+        const data = labels.map((label, index) =>
+          check.graph.type === 'bar_grouped_by_10_percentile'
+            ? graphData[index]
+            : graphData[label]
+        );
 
         const hasPassedDetails = summary[checkName].details.some(detail => detail.status === 'passed');
         const hasFailedDetails = summary[checkName].details.some(detail => detail.status === 'failed');
@@ -95,7 +98,7 @@ const CheckReport = ({ results, checks, theme }) => {
 
               {showDetails[checkName] && (
                 <div className='check_details has-text-left'>
-                  <h5 className="is-size-5 write mt-3">Description</h5>
+                  <h5 className="is-size-5 write mt-3">Descriptions</h5>
                   <p className="is-size-6">{check.description}</p>
                   <h5 className="is-size-5 write mt-3">Failed when </h5>
                   <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>
@@ -114,7 +117,6 @@ const CheckReport = ({ results, checks, theme }) => {
                   colors={check.graph?.colors || { failed: ['red'], passed: ['green'] }}
                 />
               </div>
-             
               <div className="buttons-container mb-5">
                 {hasPassedDetails && (
                   <button onClick={() => toggleSection(`${checkName}-passed`)} className="button is-grey is-light is-small">

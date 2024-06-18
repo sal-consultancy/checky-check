@@ -28,7 +28,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
     ];
 
     chartInstanceRef.current = new Chart(chartRef.current, {
-      type: type === 'bar_grouped_by_10_percentile' ? 'bar' : type,
+      type: type,
       data: {
         labels: labels,
         datasets: datasets,
