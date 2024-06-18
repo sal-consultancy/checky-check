@@ -11,6 +11,8 @@ import SummaryPage from './pages/SummaryPage';
 
 const App = () => {
   const [results, setResults] = useState({ checks: {}, results: {} });
+  //const [results, setResults] = useState(window.__CHECK_RESULTS__);
+
   const [theme, setTheme] = useState('light');
 
   useEffect(() => {
