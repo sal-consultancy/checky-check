@@ -2,8 +2,6 @@ keys
 config.json
 results.json
 .env
-*.html
 *.exe
 *.zip
-*.svg
 *.log
