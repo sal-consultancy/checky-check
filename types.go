@@ -1,5 +1,7 @@
 package main
 
+
+
 type Config struct {
 	Identities    map[string]Identity     `json:"identities"`
 	HostDefaults  HostDefaults            `json:"host_defaults"`
@@ -41,6 +43,7 @@ type Check struct {
 	FailValue   interface{} `json:"fail_value"` // Can be a string or a list of strings
 	Description string      `json:"description,omitempty"`
 	Graph       GraphConfig `json:"graph,omitempty"`
+	Timeout     string      `json:"timeout,omitempty"` // Store as string
 	Local       bool        `json:"local,omitempty"`
 }
 

@@ -57,7 +57,6 @@ Username en wachtword
 `checkycheck.exe -mode=serve -port=8071 -config=config.json`
 
 
-
 ## Type checks
 
 Lokale checks
@@ -106,6 +105,15 @@ multiple values
             "local": true
         }
 ```
+
+## Check opties
+
+| parameter | omschrijving | default |
+| --------- | ------------ | ------- |
+| title     | Titel van de check | |
+| description | Omschrijving van de check | |
+| timeout | timeout setting for specific check | 30s |
+| local | wordt deze check lokaal uitgevoerd, op de checkycheck host | false |
 
 # Ontwikkelen
 
