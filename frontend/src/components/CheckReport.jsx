@@ -86,8 +86,9 @@ const CheckReport = ({ results, checks, theme }) => {
             {index > 0 && <hr className="separator" />}
             <div className="check-section">
               <div className="check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="is-size-3 write mt-5" id={checkName}>{check.title}</h3>
+                <h3 className="is-size-3 write mt-5 " id={checkName}>{check.title}</h3>
                 <a
+                  className='no-print'
                   onClick={() => toggleDetails(checkName)}
                   style={{ cursor: 'pointer', color: '#3273dc' }}
                 >
@@ -98,7 +99,7 @@ const CheckReport = ({ results, checks, theme }) => {
 
               {showDetails[checkName] && (
                 <div className='check_details has-text-left'>
-                  <h5 className="is-size-5 write mt-3">Descriptions</h5>
+                  <h5 className="is-size-5 write mt-3">Description</h5>
                   <p className="is-size-6">{check.description}</p>
                   <h5 className="is-size-5 write mt-3">Failed when </h5>
                   <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>

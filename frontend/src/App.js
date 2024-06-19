@@ -35,10 +35,10 @@ const App = () => {
           <section>
             <div className="fixed-grid has-12-cols">
               <div className="grid">
-                <div className="cell is-col-start-3 is-col-span-2">
+                <div className="cell is-col-start-3 is-col-span-2 no-print">
                   <PageMenu items={results.checks}/>
                 </div>
-                <div className="cell is-col-start-5 is-col-span-5 my-5">
+                <div className="cell is-col-start-5 is-col-span-5 my-5 print-adjust">
                   <Routes>
                     <Route path="/" element={<CheckReport results={results.results} checks={results.checks} theme={theme}/>} />
                     <Route path="/summary" element={<SummaryPage results={results.results} checks={results.checks} />} />
