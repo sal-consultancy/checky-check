@@ -15,8 +15,7 @@ import (
 
 func evaluateCondition(output string, failWhen string, failValue interface{}) bool {
 	output = strings.TrimSpace(output)
-
-	failVals := parseFailValues(failValue)
+	failValues := parseFailValues(failValue)
 
 	switch failWhen {
 	case ">":
@@ -25,7 +24,7 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		for _, failValStr := range failVals {
+		for _, failValStr := range failValues {
 			failVal, err := strconv.ParseFloat(failValStr, 64)
 			if err != nil {
 				log.Printf("Error parsing fail value: %v\n", err)
@@ -42,7 +41,7 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		for _, failValStr := range failVals {
+		for _, failValStr := range failValues {
 			failVal, err := strconv.ParseFloat(failValStr, 64)
 			if err != nil {
 				log.Printf("Error parsing fail value: %v\n", err)
@@ -54,36 +53,53 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 		}
 		return false
 	case "==", "=":
-		for _, failValStr := range failVals {
+		for _, failValStr := range failValues {
 			if output == failValStr {
 				return true
 			}
 		}
 		return false
 	case "!=":
-		for _, failValStr := range failVals {
-			if output != failValStr {
-				return true
+		for _, failValStr := range failValues {
+			if output == failValStr {
+				return false
 			}
 		}
-		return false
+		return true
 	case "is":
-		for _, failValStr := range failVals {
+		for _, failValStr := range failValues {
 			if output == failValStr {
 				return true
 			}
 		}
 		return false
 	case "is not":
-		for _, failValStr := range failVals {
-			if output != failValStr {
-				return true
+		for _, failValStr := range failValues {
+			if output == failValStr {
+				return false
 			}
 		}
-		return false
+		return true
 	default:
 		log.Printf("Unknown fail condition: %s\n", failWhen)
 		return false
+	}
+}
+
+func parseFailValues(failValue interface{}) []string {
+	switch v := failValue.(type) {
+	case string:
+		return []string{v}
+	case []interface{}:
+		failVals := make([]string, len(v))
+		for i, val := range v {
+			failVals[i] = fmt.Sprintf("%v", val)
+		}
+		return failVals
+	case []string:
+		return v
+	default:
+		return []string{}
 	}
 }
 
@@ -103,23 +119,6 @@ func mergeVars(varsList ...map[string]string) map[string]string {
 		}
 	}
 	return result
-}
-
-func parseFailValues(failValue interface{}) []string {
-	switch v := failValue.(type) {
-	case string:
-		return []string{v}
-	case []interface{}:
-		failVals := make([]string, len(v))
-		for i, val := range v {
-			failVals[i] = fmt.Sprintf("%v", val)
-		}
-		return failVals
-	case []string:
-		return v
-	default:
-		return []string{}
-	}
 }
 
 func substituteEnvVariables(configStr string) (string, error) {

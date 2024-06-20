@@ -78,7 +78,12 @@ func runCommand(user, host string, authMethods []ssh.AuthMethod, command string)
 func runLocalCommand(command string) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
 	output, err := cmd.CombinedOutput()
-	return string(output), err
+	if err != nil {
+		log.Printf("Failed to run local command: %v", err)
+		return "", err
+	}
+
+	return string(output), nil
 }
 
 func checkServiceStatus(user, host string, authMethods []ssh.AuthMethod, service string) (string, error) {
@@ -165,10 +170,10 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 		timeout := parseTimeout(check.Timeout)
 
 		if check.Local {
-			logger.Printf("Running local command: %s", check.Command)
-			result, err = runLocalCommand(check.Command)
+			command := replaceVariables(check.Command, combinedVars)
+			result, err = runLocalCommand(command)
 			if err != nil {
-				logger.Printf("Failed to run local command %s: %v\n", check.Command, err)
+				logger.Printf("Failed to run local command %s: %v\n", command, err)
 				result = "Timeout or Command Error"
 				checkFailed = true
 			} else {
