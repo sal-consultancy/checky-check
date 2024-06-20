@@ -16,6 +16,8 @@ import (
 func evaluateCondition(output string, failWhen string, failValue interface{}) bool {
 	output = strings.TrimSpace(output)
 
+	failVals := parseFailValues(failValue)
+
 	switch failWhen {
 	case ">":
 		outputVal, err := strconv.ParseFloat(output, 64)
@@ -23,7 +25,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			failVal, err := strconv.ParseFloat(failValStr, 64)
 			if err != nil {
@@ -41,7 +42,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 			log.Printf("Error parsing output value: %v\n", err)
 			return false
 		}
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			failVal, err := strconv.ParseFloat(failValStr, 64)
 			if err != nil {
@@ -54,7 +54,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 		}
 		return false
 	case "==", "=":
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			if output == failValStr {
 				return true
@@ -62,7 +61,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 		}
 		return false
 	case "!=":
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			if output != failValStr {
 				return true
@@ -70,7 +68,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 		}
 		return false
 	case "is":
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			if output == failValStr {
 				return true
@@ -78,7 +75,6 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 		}
 		return false
 	case "is not":
-		failVals := parseFailValues(failValue)
 		for _, failValStr := range failVals {
 			if output != failValStr {
 				return true
@@ -119,6 +115,8 @@ func parseFailValues(failValue interface{}) []string {
 			failVals[i] = fmt.Sprintf("%v", val)
 		}
 		return failVals
+	case []string:
+		return v
 	default:
 		return []string{}
 	}

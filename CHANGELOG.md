@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="serveit3.1"></a>
+## [serveit3.1] - 2024-06-20
+### Rel
+- Releasing version
+
+
 <a name="serveit3"></a>
 ## [serveit3] - 2024-06-20
 ### Rel
@@ -71,7 +77,8 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2024-06-03
 
-[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...HEAD
+[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1...HEAD
+[serveit3.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...serveit3.1
 [serveit3]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/servit2...serveit3
 [servit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit-01...servit2
 [serveit-01]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit2...serveit-01

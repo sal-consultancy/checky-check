@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -72,6 +73,12 @@ func runCommand(user, host string, authMethods []ssh.AuthMethod, command string)
 	}
 
 	return string(output), nil
+}
+
+func runLocalCommand(command string) (string, error) {
+	cmd := exec.Command("sh", "-c", command)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 func checkServiceStatus(user, host string, authMethods []ssh.AuthMethod, service string) (string, error) {
@@ -157,26 +164,38 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
 		timeout := parseTimeout(check.Timeout)
 
-		if check.Command != "" {
-			command := replaceVariables(check.Command, combinedVars)
-			logger.Printf("Running command on host %s: %s", host, command)
-			result, err = runCommandWithTimeout(identity.User, host, authMethods, command, timeout)
+		if check.Local {
+			logger.Printf("Running local command: %s", check.Command)
+			result, err = runLocalCommand(check.Command)
 			if err != nil {
-				logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
+				logger.Printf("Failed to run local command %s: %v\n", check.Command, err)
 				result = "Timeout or Command Error"
 				checkFailed = true
 			} else {
 				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
 			}
-		} else if check.Service != "" {
-			logger.Printf("Checking service %s on host %s", check.Service, host)
-			result, err = checkServiceStatus(identity.User, host, authMethods, check.Service)
-			if err != nil {
-				logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
-				result = "Timeout or Command Error"
-				checkFailed = true
-			} else {
-				checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
+		} else {
+			if check.Command != "" {
+				command := replaceVariables(check.Command, combinedVars)
+				logger.Printf("Running command on host %s: %s", host, command)
+				result, err = runCommandWithTimeout(identity.User, host, authMethods, command, timeout)
+				if err != nil {
+					logger.Printf("Failed to run command %s on host %s: %v\n", command, host, err)
+					result = "Timeout or Command Error"
+					checkFailed = true
+				} else {
+					checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
+				}
+			} else if check.Service != "" {
+				logger.Printf("Checking service %s on host %s", check.Service, host)
+				result, err = checkServiceStatus(identity.User, host, authMethods, check.Service)
+				if err != nil {
+					logger.Printf("Failed to check service %s status on host %s: %v\n", check.Service, host, err)
+					result = "Timeout or Command Error"
+					checkFailed = true
+				} else {
+					checkFailed = evaluateCondition(result, check.FailWhen, check.FailValue)
+				}
 			}
 		}
 
