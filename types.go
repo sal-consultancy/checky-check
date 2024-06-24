@@ -80,5 +80,5 @@ type CheckResult struct {
 type ResultFile struct {
 	Checks  map[string]Check                  `json:"checks"`
 	Results map[string]map[string]CheckResult `json:"results"`
-	Report  Report                            `json:"report"`
+	Report  Report                            `json:"report"` // Voeg de report-informatie toe
 }
