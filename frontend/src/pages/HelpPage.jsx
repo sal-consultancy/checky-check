@@ -17,20 +17,30 @@ const HelpPage = () => {
     <div>
       <h1 className="title my-6">Help</h1>
       <div className="has-text-left">
+        <h3 className="title is-4 mt-5">Introduction</h3>
         <p>
           This is the help page for CheckyCheck. Here you can find information
           on how to use the application.
         </p>
-        This is application version {version}.
+        <h3 className="title is-4 mt-5">Dark theme</h3>
         <p>
-        <ThemeToggle />
+          With the button below you can change the theme from dark to light, 
+          and the other way around.
         </p>
-        <h3 className="title-3">Refreshing data</h3>
         <p>
-        You can refresh the data manually using the <code>/run-test</code> url. The tests will immediately start running.
-        When the tests are done, the results, the output is shown on the page.
-        <Link to="/run-tests">Run tests</Link>
+          <ThemeToggle />
         </p>
+        <h3 className="title is-4 mt-5">Refreshing data</h3>
+        <p>
+          You can refresh the data manually using the <code>/run-test</code> url. The tests will immediately start running.
+          When the tests are done, the results, the output is shown on the page.
+          <Link to="/run-tests">Run tests</Link>
+        </p>
+        <h3 className="title is-4 mt-5">Version</h3>
+        <p>
+          This is application version {version}.
+        </p>
+
       </div>
     </div>
   );

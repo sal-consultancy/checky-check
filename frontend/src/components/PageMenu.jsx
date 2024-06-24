@@ -23,7 +23,7 @@ const PageMenu = ({ items }) => {
       <ul className="menu-list">
         {Object.keys(items).map(item => (
           <li key={item}>
-            <a href={`#${item}`}>{items[item].title}</a>
+            <a href={`/#${item}`}>{items[item].title}</a>
           </li>
         ))}
       </ul>
