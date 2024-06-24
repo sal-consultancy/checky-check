@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ChartComponent from './ChartComponent';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaPlus, FaMinus } from 'react-icons/fa';
 
 const CheckReport = ({ results, checks, theme }) => {
   const [expandedSections, setExpandedSections] = useState({});
@@ -86,25 +87,27 @@ const CheckReport = ({ results, checks, theme }) => {
             {index > 0 && <hr className="separator" />}
             <div className="check-section">
               <div className="check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="is-size-3 write mt-5 " id={checkName}>{check.title}</h3>
+                <h3 className="is-size-3 write" id={checkName}>{check.title}</h3>
                 <a
                   className='no-print'
                   onClick={() => toggleDetails(checkName)}
                   style={{ cursor: 'pointer', color: '#3273dc' }}
+                  
                 >
-                  {showDetails[checkName] ? 'Hide Check Details' : 'Show Check Details'}
+                  {showDetails[checkName] ? '' : ''}
                   {showDetails[checkName] ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
+                  
                 </a>
               </div>
 
               {showDetails[checkName] && (
-                <div className='check_details has-text-left'>
-                  <h5 className="is-size-5 write mt-3">Description</h5>
-                  <p className="is-size-6">{check.description}</p>
-                  <h5 className="is-size-5 write mt-3">Failed when </h5>
-                  <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>
-                  <h5 className="is-size-5 write mt-3">Command</h5>
-                  <p><code className="is-size-7">{check.command}</code></p>
+                <div className='check_details has-text-left has-background-light py-3 px-3 my-3'>
+                    <h5 className="is-size-5 write">Check Description</h5>
+                    <p className="is-size-6">{check.description}</p>
+                    <h5 className="is-size-5 write mt-3">Command</h5>
+                    <p><code className="is-size-7">{check.command}</code></p>
+                    <h5 className="is-size-5 write mt-3">Failed when </h5>
+                    <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>
                 </div>
               )}
 

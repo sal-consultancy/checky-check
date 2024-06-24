@@ -269,6 +269,7 @@ func runChecks(configPath string) {
 	resultData := ResultFile{
 		Checks:  config.Checks,
 		Results: mapResults(results),
+		Report:  config.Report, // Voeg de report-informatie toe
 	}
 
 	if err := json.NewEncoder(resultFile).Encode(resultData); err != nil {

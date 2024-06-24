@@ -7,10 +7,11 @@ import heartIcon from './images/heartpulse.svg';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import HelpPage from './pages/HelpPage';
 import SummaryPage from './pages/SummaryPage';
+import Footer from './components/Footer';
 
 
 const App = () => {
-  const [results, setResults] = useState({ checks: {}, results: {} });
+  const [results, setResults] = useState({ checks: {}, results: {} , report: {} });
   //const [results, setResults] = useState(window.__CHECK_RESULTS__);
 
   const [theme, setTheme] = useState('light');
@@ -28,8 +29,8 @@ const App = () => {
           <section className="hero is-light">
             <div className="hero-body">
               <img className='' src={heartIcon} alt="court icon" width="50"/>
-              <p className="title">CheckyCheck</p>
-              <p className="subtitle write">Ad hoc monitoring</p>
+              <p className="title">{results.report.title}</p>
+              <p className="subtitle write">{results.report.subtitle}</p>
             </div>
           </section>
           <section>
@@ -50,6 +51,7 @@ const App = () => {
           </section>
 
     </div>
+    <Footer copyright={results.report.copyright} />
     </Router>
   );
 };
