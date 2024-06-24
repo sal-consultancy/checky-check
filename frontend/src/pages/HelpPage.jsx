@@ -25,6 +25,12 @@ const HelpPage = () => {
         <p>
         <ThemeToggle />
         </p>
+        <h3 className="title-3">Refreshing data</h3>
+        <p>
+        You can refresh the data manually using the <code>/run-test</code> url. The tests will immediately start running.
+        When the tests are done, the results, the output is shown on the page.
+        <Link to="/run-tests">Run tests</Link>
+        </p>
       </div>
     </div>
   );

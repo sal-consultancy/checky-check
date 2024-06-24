@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os/exec"
 )
 
 // Embed de gehele build directory
@@ -25,13 +26,13 @@ func main() {
 		runChecks(*configPath)
 
 	case "serve":
-		serve(*port)
+		serve(*port, *configPath)
 	default:
 		log.Fatalf("Unknown mode: %s", *mode)
 	}
 }
 
-func serve(port int) {
+func serve(port int, configPath string) {
 	// Serve de build directory
 	subFS, err := fs.Sub(content, "frontend/build")
 	if err != nil {
@@ -50,6 +51,19 @@ func serve(port int) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
+	})
+
+	// Endpoint om de tests opnieuw uit te voeren
+	http.HandleFunc("/run-tests", func(w http.ResponseWriter, r *http.Request) {
+		cmd := exec.Command("go", "run", "main.go", "remote_check.go", "types.go", "helpers.go", "-mode=check", "-config="+configPath)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			log.Printf("Error running tests: %v", err)
+			http.Error(w, string(output), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write(output)
 	})
 
 	// Start de server

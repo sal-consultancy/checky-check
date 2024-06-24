@@ -75,7 +75,7 @@ func runCommand(user, host string, authMethods []ssh.AuthMethod, command string)
 	return string(output), nil
 }
 
-func runLocalCommand(command string) (string, error) {
+func runLocalCommand(command string, timeout time.Duration) (string, error) {
 	cmd := exec.Command("sh", "-c", command)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -171,7 +171,7 @@ func runChecksOnHost(config Config, host string, hostConfig Host, groupVars map[
 
 		if check.Local {
 			command := replaceVariables(check.Command, combinedVars)
-			result, err = runLocalCommand(command)
+			result, err = runLocalCommand(command, timeout)
 			if err != nil {
 				logger.Printf("Failed to run local command %s: %v\n", command, err)
 				result = "Timeout or Command Error"
