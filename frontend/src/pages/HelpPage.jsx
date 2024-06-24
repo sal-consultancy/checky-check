@@ -32,9 +32,9 @@ const HelpPage = () => {
         </p>
         <h3 className="title is-4 mt-5">Refreshing data</h3>
         <p>
-          You can refresh the data manually using the <code>/run-test</code> url. The tests will immediately start running.
+          You can refresh the data manually using the <Link to="/run-tests">run tests</Link> link. The tests will immediately start running.
           When the tests are done, the results, the output is shown on the page.
-          <Link to="/run-tests">Run tests</Link>
+          
         </p>
         <h3 className="title is-4 mt-5">Version</h3>
         <p>
