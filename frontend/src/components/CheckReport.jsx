@@ -99,9 +99,10 @@ const CheckReport = ({ results, checks, theme }) => {
                   
                 </a>
               </div>
+              <p className="is-size-6 print-only">{check.description}</p>
 
               {showDetails[checkName] && (
-                <div className='check_details has-text-left has-background-light py-3 px-3 my-3'>
+                <div className='no-print check_details has-text-left has-background-light py-3 px-3 my-3'>
                     <h5 className="is-size-5 write">Check Description</h5>
                     <p className="is-size-6">{check.description}</p>
                     <h5 className="is-size-5 write mt-3">{check.service ? 'Service' : 'Command'}</h5>
