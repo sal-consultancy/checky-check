@@ -23,7 +23,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         data: data.map(d => d.value),
         backgroundColor: backgroundColors,
         borderColor: borderColor,
-        borderWidth: 1,
+        borderWidth: type === 'pie' ? '0.45' : '1' ,
       },
     ];
 
@@ -40,7 +40,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
             fillStyle: 'hachure',
             fillWeight: 0.8,
             roughness: 1.2,
-            hachureGap: 2.8,
+            hachureGap: 3.8,
           },
           legend: {
             display: type === 'pie',
@@ -88,7 +88,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
   }, [data, labels, theme, type, colors]);
 
   return (
-    <div style={{ width: type === 'pie' ? '40%' : '100%' }}>
+    <div style={{ width: type === 'pie' ? '45%' : '100%' }}>
       <h3 className='write'>{title}</h3>
       <canvas ref={chartRef}></canvas>
     </div>
