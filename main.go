@@ -8,14 +8,11 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-
 )
 
 // Embed de gehele build directory
 //go:embed frontend/build/*
 var content embed.FS
-
-
 
 func main() {
 	configPath := flag.String("config", "config.json", "Path to the config file")
@@ -62,4 +59,3 @@ func serve(port int) {
 		log.Fatalf("Server failed to start: %v", err)
 	}
 }
-

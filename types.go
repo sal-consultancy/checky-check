@@ -1,7 +1,5 @@
 package main
 
-
-
 type Config struct {
 	Identities    map[string]Identity     `json:"identities"`
 	HostDefaults  HostDefaults            `json:"host_defaults"`
@@ -56,7 +54,9 @@ type Host struct {
 
 type Report struct {
 	Title       string `json:"title"`
+	Subtitle    string `json:"subtitle"`
 	Description string `json:"description"`
+	Copyright   string `json:"copyright"`
 	CSS         string `json:"css"`
 }
 
@@ -78,7 +78,7 @@ type CheckResult struct {
 }
 
 type ResultFile struct {
-	Checks  map[string]Check                    `json:"checks"`
+	Checks  map[string]Check                  `json:"checks"`
 	Results map[string]map[string]CheckResult `json:"results"`
+	Report  Report                            `json:"report"`
 }
-

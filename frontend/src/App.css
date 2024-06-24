@@ -1,7 +1,31 @@
-.App {
-  text-align: center;
+html {
+  height: 100%;
 }
 
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.App {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  text-align: center;
+
+}
+
+footer.footer {
+  margin-top: auto;
+}
 
 
 @font-face {
