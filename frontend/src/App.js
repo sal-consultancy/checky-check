@@ -35,7 +35,7 @@ const App = () => {
       <div className="App">
         <section className="hero is-light">
           <div className="hero-body">
-            <img className='' src={heartIcon} alt="court icon" width="50" style={{ color: "red"}}/>
+            <img className='' src={heartIcon} alt="court icon" width="50"/>
             <p className="title">{results.report.title}</p>
             <p className="subtitle write">{results.report.subtitle}</p>
           </div>
