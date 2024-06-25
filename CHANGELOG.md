@@ -2,6 +2,12 @@
 ## [Unreleased]
 
 
+<a name="v4.0.2"></a>
+## [v4.0.2] - 2024-06-25
+### Rel
+- Releasing version
+
+
 <a name="v4.0.1"></a>
 ## [v4.0.1] - 2024-06-25
 ### Rel
@@ -110,7 +116,8 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2024-06-03
 
-[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.1...HEAD
+[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.2...HEAD
+[v4.0.2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.1...v4.0.2
 [v4.0.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.0...v4.0.1
 [v4.0.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.1...v4.0.0
 [serveit3.1.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1...serveit3.1.1
