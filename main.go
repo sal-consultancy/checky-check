@@ -8,12 +8,25 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"runtime"
+	"strings"
 )
 
 // Embed de gehele build directory
 //go:embed frontend/build/*
 var content embed.FS
+
+var version string
+
+func init() {
+	data, err := ioutil.ReadFile("version.txt")
+	if err != nil {
+		log.Fatalf("Failed to read version.txt: %v", err)
+	}
+	version = strings.TrimSpace(string(data))
+}
 
 func main() {
 	configPath := flag.String("config", "config.json", "Path to the config file")
@@ -30,6 +43,18 @@ func main() {
 	default:
 		log.Fatalf("Unknown mode: %s", *mode)
 	}
+}
+
+func getCommand(configPath string) *exec.Cmd {
+	binaryName := fmt.Sprintf("checkycheck-%s-%s-%s", version, runtime.GOOS, runtime.GOARCH)
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	if _, err := os.Stat(binaryName); os.IsNotExist(err) {
+		// Fallback to running the Go files directly if the binary doesn't exist
+		return exec.Command("go", "run", "main.go", "remote_check.go", "types.go", "helpers.go", "-mode=check", "-config="+configPath)
+	}
+	return exec.Command("./"+binaryName, "-mode=check", "-config="+configPath)
 }
 
 func serve(port int, configPath string) {
@@ -53,16 +78,20 @@ func serve(port int, configPath string) {
 		w.Write(data)
 	})
 
-	// Endpoint om de tests opnieuw uit te voeren
+	// Endpoint voor het uitvoeren van tests
 	http.HandleFunc("/run-tests", func(w http.ResponseWriter, r *http.Request) {
-		cmd := exec.Command("go", "run", "main.go", "remote_check.go", "types.go", "helpers.go", "-mode=check", "-config="+configPath)
+		configPath := r.URL.Query().Get("config")
+		if configPath == "" {
+			configPath = "config.json"
+		}
+		cmd := getCommand(configPath)
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Printf("Error running tests: %v", err)
-			http.Error(w, string(output), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Error running tests: %v\nOutput: %s", err, output), http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
 		w.Write(output)
 	})
 

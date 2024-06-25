@@ -18,6 +18,6 @@ FILE=checkycheck-${RELEASE}-${GOOS}-${GOARCH}
 go build -o ${FILE}main.go remote_check.go types.go helpers.go 
 zip ${FILE}.zip ${FILE}
 
-git commit -am "rel: Releasing version ${RELAEASE}"
+git commit -am "rel: Bumping for releasing version v${RELEASE}"
 git push
 
