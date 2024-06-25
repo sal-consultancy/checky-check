@@ -1,6 +1,6 @@
 #!/bin/bash
-RELEASE=serveit3.1.1
-git tag $RELEASE
+RELEASE=$(cat version.txt)
+git tag "v${$RELEASE}"
 git-chglog -o CHANGELOG.md
 cd frontend
 npm run build

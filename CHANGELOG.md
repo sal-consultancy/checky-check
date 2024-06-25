@@ -1,6 +1,13 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+### Chore
+- adding version.txt
+- prepare for pr
+
+### Rel
+- Releasing version
+
 
 <a name="serveit3.1.1"></a>
 ## [serveit3.1.1] - 2024-06-20
@@ -47,6 +54,12 @@
 - add option show to graph
 
 
+<a name="serveit3.1.2"></a>
+## [serveit3.1.2] - 2024-06-14
+
+<a name="serveit3.1.0"></a>
+## [serveit3.1.0] - 2024-06-14
+
 <a name="serveit2"></a>
 ## [serveit2] - 2024-06-14
 
@@ -91,7 +104,9 @@
 [serveit3.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...serveit3.1
 [serveit3]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/servit2...serveit3
 [servit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit-01...servit2
-[serveit-01]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit2...serveit-01
+[serveit-01]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.2...serveit-01
+[serveit3.1.2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.0...serveit3.1.2
+[serveit3.1.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit2...serveit3.1.0
 [serveit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.3.0...serveit2
 [0.3.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.2.0...0.3.0
 [0.2.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.10...0.2.0
