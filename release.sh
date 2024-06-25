@@ -1,6 +1,6 @@
 #!/bin/bash
 RELEASE=$(cat version.txt)
-git tag "v${$RELEASE}"
+git tag "v${RELEASE}"
 git-chglog -o CHANGELOG.md
 cd frontend
 npm run build

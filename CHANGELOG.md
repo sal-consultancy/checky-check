@@ -1,11 +1,15 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
+
+<a name="v4.0.0"></a>
+## [v4.0.0] - 2024-06-25
 ### Chore
 - adding version.txt
 - prepare for pr
 
 ### Rel
+- Releasing version
 - Releasing version
 
 
@@ -99,7 +103,8 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2024-06-03
 
-[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.1...HEAD
+[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.0...HEAD
+[v4.0.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.1...v4.0.0
 [serveit3.1.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1...serveit3.1.1
 [serveit3.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...serveit3.1
 [serveit3]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/servit2...serveit3
