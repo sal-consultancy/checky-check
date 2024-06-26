@@ -17,7 +17,7 @@ const PageMenu = ({ items }) => {
         <Link to="/summary">Summary</Link>
         </li>
       </ul>
-      <p className="menu-label">Jobs</p>
+      <p className="menu-label">Checks</p>
 
       <nav className="menu">
       <ul className="menu-list write">
