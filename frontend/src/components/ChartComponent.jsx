@@ -23,7 +23,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         data: data.map(d => d.value),
         backgroundColor: backgroundColors,
         borderColor: borderColor,
-        borderWidth: type === 'pie' ? '0.45' : '1' ,
+        borderWidth: type === 'pie' ? '0.45' : '0.8' ,
       },
     ];
 

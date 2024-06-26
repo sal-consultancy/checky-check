@@ -100,12 +100,18 @@ const CheckReport = ({ results, checks, theme }) => {
 
               {showDetails[checkName] && (
                 <div className='no-print check_details has-text-left has-background-light py-3 px-3 my-3'>
-                    <h5 className="is-size-5 write">Check Description</h5>
+                    <h5 className="is-size-5 write">Description</h5>
                     <p className="is-size-6">{check.description}</p>
                     <h5 className="is-size-5 write mt-3">{check.service ? 'Service' : 'Command'}</h5>
                     <p><code className="is-size-7">{check.service || check.command}</code></p>
                     <h5 className="is-size-5 write mt-3">Failed when </h5>
-                    <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>
+                    <p>
+                      <span className="is-size-7">
+                        {Array.isArray(check.fail_value) ? check.fail_value.map((val, idx) => (
+                          <span><span key={idx}>{idx > 0 ? ' or ' : ''}</span><code>result {check.fail_when} {val}</code></span>
+                        )) : <code>result {check.fail_when} {check.fail_value}</code> }
+                      </span>
+                    </p>
                 </div>
               )}
 
