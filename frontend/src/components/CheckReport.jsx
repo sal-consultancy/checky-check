@@ -86,17 +86,14 @@ const CheckReport = ({ results, checks, theme }) => {
           <React.Fragment key={checkName}>
             {index > 0 && <hr className="separator" />}
             <div className="check-section">
-              <div className="check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="is-size-3 write" id={checkName}>{check.title}</h3>
+            <div className="check-header" style={{ display: 'flex', alignItems: 'center' }}>
+                <h4 className="is-size-4 write" id={checkName} style={{ flexGrow: 1, textAlign: 'center' }}>{check.title}</h4>
                 <a
                   className='no-print'
                   onClick={() => toggleDetails(checkName)}
                   style={{ cursor: 'pointer', color: '#3273dc' }}
-                  
                 >
-                  {showDetails[checkName] ? '' : ''}
                   {showDetails[checkName] ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
-                  
                 </a>
               </div>
               <p className="is-size-6 print-only">{check.description}</p>
