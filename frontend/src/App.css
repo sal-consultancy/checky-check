@@ -3,22 +3,22 @@ html {
 }
 
 body {
-  display: flex;
-  flex-direction: column;
+  /* display: flex;
+  flex-direction: column; */
   min-height: 100vh;
   margin: 0;
 }
 
-#root {
+/* #root {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-}
+} */
 
 .App {
-  display: flex;
+  /* display: flex;
   flex-direction: column;
-  flex-grow: 1;
+  flex-grow: 1; */
   text-align: center;
 
 }
@@ -52,6 +52,10 @@ footer.footer {
   .print-only {
     display: block !important;
   }
+  /* .check_details {
+    width: 100% !important;
+    box-sizing: border-box;
+  }   */
 }
 
 @media screen {

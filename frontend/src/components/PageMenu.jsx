@@ -9,18 +9,18 @@ const PageMenu = ({ items }) => {
   }
 
   return (
-    <aside className="menu my-5 write">
+    <aside className="menu my-5 ">
       <p className="menu-label">Reports</p>
-      <ul className="menu-list">
+      <ul className="menu-list write">
         <li>
-        <Link to="/">Overview</Link>
+        <Link to="/">Report</Link>
         <Link to="/summary">Summary</Link>
         </li>
       </ul>
-      <p className="menu-label">Jobs</p>
+      <p className="menu-label">Checks</p>
 
       <nav className="menu">
-      <ul className="menu-list">
+      <ul className="menu-list write">
         {Object.keys(items).map(item => (
           <li key={item}>
             <a href={`/#${item}`}>{items[item].title}</a>
@@ -29,7 +29,7 @@ const PageMenu = ({ items }) => {
       </ul>
     </nav>
       <p className="menu-label">CheckyCheck</p>
-      <ul className="menu-list">
+      <ul className="menu-list write">
         <li>
           <Link
             to="/help"

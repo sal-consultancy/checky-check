@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import ChartComponent from './ChartComponent';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
-import { FaPlus, FaMinus } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaPlus, FaMinus } from 'react-icons/fa';
 
 const CheckReport = ({ results, checks, theme }) => {
   const [expandedSections, setExpandedSections] = useState({});
   const [showDetails, setShowDetails] = useState({});
+  const [showAllFailedHosts, setShowAllFailedHosts] = useState(false);
+  const [showOnlyFailedTests, setShowOnlyFailedTests] = useState(false);
 
   const toggleSection = section => {
     setExpandedSections(prevState => ({
@@ -19,6 +20,25 @@ const CheckReport = ({ results, checks, theme }) => {
       ...prevState,
       [checkName]: !prevState[checkName],
     }));
+  };
+
+  const toggleAllFailedHosts = () => {
+    setShowAllFailedHosts(prevState => !prevState);
+    if (!showAllFailedHosts) {
+      const newExpandedSections = {};
+      Object.keys(summary).forEach(checkName => {
+        if (summary[checkName].failed > 0) {
+          newExpandedSections[`${checkName}-failed`] = true;
+        }
+      });
+      setExpandedSections(newExpandedSections);
+    } else {
+      setExpandedSections({});
+    }
+  };
+
+  const toggleShowOnlyFailedTests = () => {
+    setShowOnlyFailedTests(prevState => !prevState);
   };
 
   const summary = Object.keys(checks).reduce((acc, checkName) => {
@@ -41,8 +61,26 @@ const CheckReport = ({ results, checks, theme }) => {
 
   return (
     <div className="check-report">
+      <div className="no-print">
+        <h6 className="is-size-6 write my-3">report filter</h6>
+        <div className="buttons-container mb-5">
+          <button onClick={toggleAllFailedHosts} className="button is-grey is-light is-small">
+            {showAllFailedHosts ? 'Collapse All Failed Hosts' : 'Expand All Failed Hosts'}
+            {showAllFailedHosts ? <FaMinus className="ml-2" /> : <FaPlus className="ml-2" />}
+          </button>
+          <button onClick={toggleShowOnlyFailedTests} className="button is-grey is-light is-small ml-2">
+            {showOnlyFailedTests ? 'Show All Tests' : 'Show Only Failed Tests'}
+            {showOnlyFailedTests ? <FaMinus className="ml-2" /> : <FaPlus className="ml-2" />}
+          </button>
+        </div>
+        <hr className="separator" />
+      </div>
       {Object.keys(summary).map((checkName, index) => {
         const check = checks[checkName];
+
+        if (showOnlyFailedTests && summary[checkName].failed === 0) {
+          return null;
+        }
 
         let graphData;
         if (check.graph.type === 'bar_grouped_by_10_percentile') {
@@ -86,32 +124,35 @@ const CheckReport = ({ results, checks, theme }) => {
           <React.Fragment key={checkName}>
             {index > 0 && <hr className="separator" />}
             <div className="check-section">
-              <div className="check-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 className="is-size-3 write" id={checkName}>{check.title}</h3>
+              <div className="check-header" style={{ display: 'flex', alignItems: 'center' }}>
+                <h4 className="is-size-4 write" id={checkName} style={{ flexGrow: 1, textAlign: 'center' }}>{check.title}</h4>
                 <a
                   className='no-print'
                   onClick={() => toggleDetails(checkName)}
                   style={{ cursor: 'pointer', color: '#3273dc' }}
-                  
                 >
-                  {showDetails[checkName] ? '' : ''}
                   {showDetails[checkName] ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
-                  
                 </a>
               </div>
-              <p className="is-size-6 print-only">{check.description}</p>
 
+              <p className="is-size-6 has-text-left print-only">{check.description}</p>
               {showDetails[checkName] && (
-                <div className='no-print check_details has-text-left has-background-light py-3 px-3 my-3'>
-                    <h5 className="is-size-5 write">Check Description</h5>
-                    <p className="is-size-6">{check.description}</p>
-                    <h5 className="is-size-5 write mt-3">{check.service ? 'Service' : 'Command'}</h5>
+                <div className='check_details has-text-left has-background-light py-3 px-3 my-3'>
+                    <h5 className="is-size-6 write ">Description</h5>
+                    <p className="is-size-6 has-text-weight-light">{check.description}</p>
+                    <h5 className="is-size-6 write mt-3">{check.service ? 'Service' : 'Command'}</h5>
                     <p><code className="is-size-7">{check.service || check.command}</code></p>
-                    <h5 className="is-size-5 write mt-3">Failed when </h5>
-                    <p><code className="is-size-7">result {check.fail_when} {check.fail_value}</code></p>
+                    <h5 className="is-size-6 write mt-3">Failed when </h5>
+                    <p>
+                      <span className="is-size-7">
+                        {Array.isArray(check.fail_value) ? check.fail_value.map((val, idx) => (
+                          <span><span key={idx}>{idx > 0 ? ' or ' : ''}</span><code>result {check.fail_when} {val}</code></span>
+                        )) : <code>result {check.fail_when} {check.fail_value}</code> }
+                      </span>
+                    </p>
                 </div>
               )}
-
+ 
               <div className="columns is-multiline mt-5">
                 <ChartComponent
                   data={data}
@@ -122,7 +163,7 @@ const CheckReport = ({ results, checks, theme }) => {
                   colors={check.graph?.colors || { failed: ['red'], passed: ['green'] }}
                 />
               </div>
-              <div className="buttons-container mb-5">
+              <div className="buttons-container mb-5 no-print">
                 {hasPassedDetails && (
                   <button onClick={() => toggleSection(`${checkName}-passed`)} className="button is-grey is-light is-small">
                     {expandedSections[`${checkName}-passed`] ? 'Hide Passed Hosts' : 'Show Passed Hosts'}
@@ -169,7 +210,7 @@ const CheckReport = ({ results, checks, theme }) => {
                 </>
               )}
 
-              {expandedSections[`${checkName}-failed`] && (
+              {expandedSections[`${checkName}-failed`] && summary[checkName].failed > 0 && (
                 <>
                   <h5 className="is-size-5 write mt-3 has-text-left">Failed hosts</h5>
                   <table className="table is-striped is-bordered is-size-7 mt-2">
