@@ -34,7 +34,10 @@ const HelpPage = () => {
         <p>
           You can refresh the data manually using the <Link to="/run-tests">run tests</Link> link. The tests will immediately start running.
           When the tests are done, the results, the output is shown on the page.
-          
+        </p>
+        <h3 className="title is-4 mt-5">Check voorbeelden</h3>
+        <p>
+          Op de <Link to="/templates">templates</Link> pagina zijn voorbeelden van checks te vinden. 
         </p>
         <h3 className="title is-4 mt-5">Version</h3>
         <p>

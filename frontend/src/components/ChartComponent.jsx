@@ -23,7 +23,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         data: data.map(d => d.value),
         backgroundColor: backgroundColors,
         borderColor: borderColor,
-        borderWidth: type === 'pie' ? '0.15' : '0.8' ,
+        borderWidth: type === 'pie' ? '0.2' : '0.8' ,
       },
     ];
 
@@ -44,7 +44,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
           },
           legend: {
             display: type === 'pie',
-            position: 'bottom',
+            position: 'right',
             labels: {
               font: {
                 family: 'as-virgil',
@@ -88,7 +88,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
   }, [data, labels, theme, type, colors]);
 
   return (
-    <div style={{ width: type === 'pie' ? '35%' : '90%' }}>
+    <div style={{ width: type === 'pie' ? '75%' : '90%' }}>
       <h3 className='write'>{title}</h3>
       <canvas ref={chartRef}></canvas>
     </div>

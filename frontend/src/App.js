@@ -9,6 +9,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import HelpPage from './pages/HelpPage';
 import SummaryPage from './pages/SummaryPage';
 import RunTestsPage from './pages/RunTestsPage';  // Importeer de nieuwe component
+import CheckTemplatesPage from './pages/CheckTemplatesPage';  // Importeer de nieuwe component
 
 
 const App = () => {
@@ -51,7 +52,9 @@ const App = () => {
                   <Route path="/" element={<CheckReport results={results.results} checks={results.checks} theme={theme} />} />
                   <Route path="/summary" element={<SummaryPage results={results.results} checks={results.checks} />} />
                   <Route path="/help" element={<HelpPage />} />
+                  <Route path="/templates" element={<CheckTemplatesPage />} />
                   <Route path="/run-tests" element={<RunTestsPage onTestsComplete={handleTestsComplete} />} /> {/* Nieuwe route */}
+                  
                 </Routes>
               </div>
             </div>

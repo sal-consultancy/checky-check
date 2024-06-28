@@ -31,7 +31,7 @@ const PageMenu = ({ items }) => {
       <p className="menu-label">CheckyCheck</p>
       <ul className="menu-list write">
         <li>
-          <Link
+        <Link
             to="/help"
             className={`navbar-item ${
               location.pathname === "/help" ? "has-background-light" : ""
