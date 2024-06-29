@@ -13,8 +13,8 @@ const PageMenu = ({ items }) => {
       <p className="menu-label">Reports</p>
       <ul className="menu-list write">
         <li>
-        <Link to="/summary">Summary</Link>
-        <Link to="/">Report</Link>
+        <Link to="/">Summary</Link>
+        <Link to="/report">Report</Link>
         </li>
       </ul>
       <p className="menu-label">Checks</p>
@@ -23,7 +23,7 @@ const PageMenu = ({ items }) => {
       <ul className="menu-list write">
         {Object.keys(items).map(item => (
           <li key={item}>
-            <a href={`/#${item}`}>{items[item].title}</a>
+            <a href={`#${item}`}>{items[item].title}</a>
           </li>
         ))}
       </ul>

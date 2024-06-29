@@ -49,8 +49,8 @@ const App = () => {
               </div>
               <div className="cell is-col-start-5 is-col-span-4 my-5 print-adjust">
                 <Routes>
-                  <Route path="/" element={<CheckReport results={results.results} checks={results.checks} theme={theme} />} />
-                  <Route path="/summary" element={<SummaryPage results={results.results} checks={results.checks} />} />
+                  <Route path="/report" element={<CheckReport results={results.results} checks={results.checks} theme={theme} />} />
+                  <Route path="/" element={<SummaryPage results={results.results} checks={results.checks} />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/templates" element={<CheckTemplatesPage />} />
                   <Route path="/run-tests" element={<RunTestsPage onTestsComplete={handleTestsComplete} />} /> {/* Nieuwe route */}

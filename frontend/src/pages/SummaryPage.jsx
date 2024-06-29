@@ -41,6 +41,9 @@ const CheckReport = ({ results, checks, theme }) => {
   const barChartRef = useRef(null);
 
   useEffect(() => {
+    const theme = localStorage.getItem('theme');
+    const borderColor = theme === 'dark' ? 'white' : 'black';
+
     const pieChart = new Chart(pieChartRef.current, {
       type: 'pie',
       data: {
@@ -50,8 +53,8 @@ const CheckReport = ({ results, checks, theme }) => {
             label: '# of Tests',
             data: [passedCount, failedCount],
             backgroundColor: ['green', 'red'],
-            borderColor: 'black',
-            borderWidth: 0.8
+            borderColor: borderColor,
+            borderWidth: 0.4
           }
         ]
       },
@@ -83,6 +86,9 @@ const CheckReport = ({ results, checks, theme }) => {
   }, [passedCount, failedCount]);
 
   useEffect(() => {
+    const theme = localStorage.getItem('theme');
+    const borderColor = theme === 'dark' ? 'white' : 'black';
+
     const checksWithFailures = Object.keys(summary).filter(checkName => summary[checkName].failed > 0);
     const failedChecks = checksWithFailures.map(checkName => ({
       checkName,
@@ -96,17 +102,17 @@ const CheckReport = ({ results, checks, theme }) => {
         labels: failedChecks.map(item => checks[item.checkName].title),
         datasets: [
           {
-            label: '# of Failed Hosts',
+            label: '# of Failed Tests',
             data: failedChecks.map(item => item.failed),
             backgroundColor: 'red',
-            borderColor: 'black',
+            borderColor: borderColor,
             borderWidth: 0.8
           },
           {
-            label: '# of Passed Hosts',
+            label: '# of Passed Tests',
             data: failedChecks.map(item => item.passed),
             backgroundColor: 'green',
-            borderColor: 'black',
+            borderColor: borderColor,
             borderWidth: 0.8
           }
         ]
@@ -118,7 +124,7 @@ const CheckReport = ({ results, checks, theme }) => {
             fillStyle: 'hachure',
             fillWeight: 0.8,
             roughness: 1.2,
-            hachureGap: 2.8
+            hachureGap: 3.8
           },
           legend: {
             display: true,
@@ -154,6 +160,12 @@ const CheckReport = ({ results, checks, theme }) => {
               display: false
             },
             ticks: {
+              stepSize: 1,
+              callback: function (value) {
+                if (Number.isInteger(value)) {
+                  return value;
+                }
+              },
               font: {
                 family: 'as-virgil'
               }
@@ -170,16 +182,17 @@ const CheckReport = ({ results, checks, theme }) => {
 
   return (
     <div className="check-report">
-
-
       <h5 className='is-size-5 write py-5'>Failed Tests Overview</h5>
       <div className="bar-chart-container" style={{ width: '100%', margin: '0 auto' }}>
         <canvas ref={barChartRef}></canvas>
       </div>
-      <h5 className='is-size-5 write py-5'>Total Passed vs Failed Checks</h5>
+
+      <h5 className='is-size-5 write py-5'>Passed vs Failed Checks</h5>
       <div className="pie-chart-container" style={{ width: '50%', margin: '0 auto' }}>
         <canvas ref={pieChartRef}></canvas>
       </div>
+
+     
     </div>
   );
 };
