@@ -11,6 +11,8 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
       chartInstanceRef.current.destroy();
     }
 
+    const theme = localStorage.getItem('theme');
+
     const borderColor = theme === 'dark' ? 'white' : 'black';
 
     const backgroundColors = data.map((value, index) => {
@@ -23,7 +25,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         data: data.map(d => d.value),
         backgroundColor: backgroundColors,
         borderColor: borderColor,
-        borderWidth: type === 'pie' ? '0.2' : '0.8' ,
+        borderWidth: type === 'pie' ? '0.4' : '0.8' ,
       },
     ];
 
@@ -70,6 +72,8 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
               display: false,
             },
             ticks: {
+              stepSize: 1,
+
               font: {
                 family: 'as-virgil',
               },

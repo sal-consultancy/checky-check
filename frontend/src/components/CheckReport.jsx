@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import ChartComponent from './ChartComponent';
-import { FaChevronDown, FaChevronUp, FaPlus, FaMinus } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaPlus, FaMinus, FaTimes } from 'react-icons/fa';
 
 const CheckReport = ({ results, checks, theme }) => {
   const [expandedSections, setExpandedSections] = useState({});
   const [showDetails, setShowDetails] = useState({});
   const [showAllFailedHosts, setShowAllFailedHosts] = useState(false);
   const [showOnlyFailedTests, setShowOnlyFailedTests] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleSection = section => {
     setExpandedSections(prevState => ({
@@ -41,6 +42,14 @@ const CheckReport = ({ results, checks, theme }) => {
     setShowOnlyFailedTests(prevState => !prevState);
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const clearSearch = () => {
+    setSearchTerm("");
+  };
+
   const summary = Object.keys(checks).reduce((acc, checkName) => {
     acc[checkName] = { passed: 0, failed: 0, details: [] };
 
@@ -59,10 +68,16 @@ const CheckReport = ({ results, checks, theme }) => {
     return acc;
   }, {});
 
+  const filteredChecks = Object.keys(summary).filter(checkName => 
+    checks[checkName].title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    checks[checkName].description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="check-report">
+
       <div className="no-print">
-        <h6 className="is-size-6 write my-3">report filter</h6>
+        <h6 className="is-size-6 write my-3">Report Filter</h6>
         <div className="buttons-container mb-5">
           <button onClick={toggleAllFailedHosts} className="button is-grey is-light is-small">
             {showAllFailedHosts ? 'Collapse All Failed Hosts' : 'Expand All Failed Hosts'}
@@ -73,9 +88,25 @@ const CheckReport = ({ results, checks, theme }) => {
             {showOnlyFailedTests ? <FaMinus className="ml-2" /> : <FaPlus className="ml-2" />}
           </button>
         </div>
+        <div className="field has-addons">
+          <div className="control is-expanded">
+            <input 
+              type="text" 
+              className="input is-small" 
+              placeholder="Search checks..." 
+              value={searchTerm}
+              onChange={handleSearchChange}
+            />
+          </div>
+          <div className="control">
+            <button className="button is-small" style={{ height: '100%' }} onClick={clearSearch}>
+              <FaTimes />
+            </button>
+          </div>
+        </div>
         <hr className="separator" />
       </div>
-      {Object.keys(summary).map((checkName, index) => {
+      {filteredChecks.map((checkName, index) => {
         const check = checks[checkName];
 
         if (showOnlyFailedTests && summary[checkName].failed === 0) {
@@ -146,7 +177,7 @@ const CheckReport = ({ results, checks, theme }) => {
                     <p>
                       <span className="is-size-7">
                         {Array.isArray(check.fail_value) ? check.fail_value.map((val, idx) => (
-                          <span><span key={idx}>{idx > 0 ? ' or ' : ''}</span><code>result {check.fail_when} {val}</code></span>
+                          <span key={idx}><span>{idx > 0 ? ' or ' : ''}</span><code>result {check.fail_when} {val}</code></span>
                         )) : <code>result {check.fail_when} {check.fail_value}</code> }
                       </span>
                     </p>

@@ -75,7 +75,7 @@
             "fail_value": "100"
         },        
         "check_firewall_running": {
-            "title":"Firewall",
+            "title":"Linux Firewall",
             "description":"Controleer of er een variabele gezet wordt in deze app",
             "graph": {
                 "title":"Variabele",
@@ -91,7 +91,7 @@
             "fail_value": "0"
         },
         "show_os":{
-            "title": "Operating System",
+            "title": "Linux version",
             "description": "Controleert of een URL bereikbaar is door de HTTP-statuscode te verifiëren.",
             "graph": {
                 "title": "Aantal per os.",
@@ -102,7 +102,7 @@
             "fail_value": "nolinux"
         },
         "diskspace":{
-            "title": "Diskspace",
+            "title": "SAP Diskspace",
             "description": "Toont de diskspace van een specifieke disk..",
             "graph": {
                 "title": "Aantal per % vulling.",
