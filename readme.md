@@ -20,7 +20,15 @@ The configuration file consists of:
 - checks
 - host_groups
 
-Secrets can be specified as environment variables. In the configuration file, you can use `${env.VARIABLE}` to refer to these variables.
+### Variables
+
+You can use variables in the configuration file. 
+
+Variables are defined in the `host_vars`. These can be defined in the host_templates, host_groups and in the host self.
+
+You can use variables `${url}` in the checks.
+
+You can also use environment variables, these are prefixed with `env.`, for example `${env.id_rsa_passphrase}`.
 
 ### Identities
 
