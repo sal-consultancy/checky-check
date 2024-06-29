@@ -70,6 +70,8 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
               display: false,
             },
             ticks: {
+              stepSize: 1,
+
               font: {
                 family: 'as-virgil',
               },

@@ -75,6 +75,7 @@ const CheckReport = ({ results, checks, theme }) => {
 
   return (
     <div className="check-report">
+
       <div className="no-print">
         <h6 className="is-size-6 write my-3">Report Filter</h6>
         <div className="buttons-container mb-5">
