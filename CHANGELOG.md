@@ -2,62 +2,23 @@
 ## [Unreleased]
 
 
+<a name="v4.3.0"></a>
+## [v4.3.0] - 2024-06-30
+### Chore
+- footer is back at the bottom of the screen
+- prepare for release
+
+### Doc
+- improved readme
+
+
 <a name="v4.1.0"></a>
 ## [v4.1.0] - 2024-06-26
-### Fix
-- correct config file is used now when rerunning checks from help
-
-### Rel
-- Bumping for releasing version v4.0.2
-
-
-<a name="v4.0.2"></a>
-## [v4.0.2] - 2024-06-25
-### Rel
-- Releasing version
-
-
-<a name="v4.0.1"></a>
-## [v4.0.1] - 2024-06-25
-### Rel
-- Releasing version
-- Releasing version
-
-
-<a name="v4.0.0"></a>
-## [v4.0.0] - 2024-06-25
 ### Chore
 - adding version.txt
 - prepare for pr
-
-### Rel
-- Releasing version
-- Releasing version
-
-
-<a name="serveit3.1.1"></a>
-## [serveit3.1.1] - 2024-06-20
-### Chore
 - adding release script
 
-### Rel
-- Releasing version
-
-
-<a name="serveit3.1"></a>
-## [serveit3.1] - 2024-06-20
-### Rel
-- Releasing version
-
-
-<a name="serveit3"></a>
-## [serveit3] - 2024-06-20
-### Rel
-- Releasing version
-
-
-<a name="servit2"></a>
-## [servit2] - 2024-06-19
 ### Doc
 - improved general readme
 
@@ -65,7 +26,20 @@
 - setting the port and mode to serve or check
 
 ### Fix
+- correct config file is used now when rerunning checks from help
 - percentile bar graph showing failed color in graph
+
+### Rel
+- Bumping for releasing version v4.1.0
+- Bumping for releasing version v4.0.2
+- Releasing version
+- Releasing version
+- Releasing version
+- Releasing version
+- Releasing version
+- Releasing version
+- Releasing version
+- Releasing version
 
 
 <a name="serveit-01"></a>
@@ -80,8 +54,8 @@
 - add option show to graph
 
 
-<a name="serveit2"></a>
-## [serveit2] - 2024-06-14
+<a name="v4.0.1"></a>
+## [v4.0.1] - 2024-06-14
 
 <a name="serveit3.1.2"></a>
 ## [serveit3.1.2] - 2024-06-14
@@ -89,17 +63,23 @@
 <a name="serveit3.1.0"></a>
 ## [serveit3.1.0] - 2024-06-14
 
-<a name="0.3.0"></a>
-## [0.3.0] - 2024-06-13
-### Chore
-- adding chglog to repo
+<a name="serveit3"></a>
+## [serveit3] - 2024-06-14
 
+<a name="serveit2"></a>
+## [serveit2] - 2024-06-14
+
+<a name="0.3.0"></a>
+## [0.3.0] - 2024-06-14
 ### Feat
 - add new title to tests
 
 
 <a name="0.2.0"></a>
 ## [0.2.0] - 2024-06-12
+### Chore
+- adding chglog to repo
+
 ### Doc
 - adding identity info to README.md
 
@@ -125,19 +105,15 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2024-06-03
 
-[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.1.0...HEAD
-[v4.1.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.2...v4.1.0
-[v4.0.2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.1...v4.0.2
-[v4.0.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.0...v4.0.1
-[v4.0.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.1...v4.0.0
-[serveit3.1.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1...serveit3.1.1
-[serveit3.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...serveit3.1
-[serveit3]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/servit2...serveit3
-[servit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit-01...servit2
-[serveit-01]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit2...serveit-01
-[serveit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.2...serveit2
+[Unreleased]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.3.0...HEAD
+[v4.3.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.1.0...v4.3.0
+[v4.1.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit-01...v4.1.0
+[serveit-01]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/v4.0.1...serveit-01
+[v4.0.1]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.2...v4.0.1
 [serveit3.1.2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3.1.0...serveit3.1.2
-[serveit3.1.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.3.0...serveit3.1.0
+[serveit3.1.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit3...serveit3.1.0
+[serveit3]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/serveit2...serveit3
+[serveit2]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.3.0...serveit2
 [0.3.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.2.0...0.3.0
 [0.2.0]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.10...0.2.0
 [0.10]: https://git.ams8.nl/slubbers/GoCheckyCheck/compare/0.0.1...0.10
