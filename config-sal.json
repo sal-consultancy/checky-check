@@ -22,13 +22,16 @@
             "echo_var": "20"
         },
         "host_checks":[
+            "check_uptime"
+        ],
+        "hhost_checks":[
             "check_uptime",
             "check_firewall_running",
             "echo_var",
             "diskspace" 
         ]
     },
-    "host_templates":{
+    "hhost_templates":{
         "sap_host_v1": {
             "host_vars": {
                 "sap_type": "webdisp",
@@ -72,7 +75,7 @@
                 "ccolors": { "failed": [ "blue" ], "passed": [ "green" ] }
             },
             "fail_when": ">",
-            "fail_value": "100"
+            "fail_value": "200"
         },        
         "check_firewall_running": {
             "title":"Linux Firewall",
