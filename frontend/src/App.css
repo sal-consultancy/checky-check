@@ -9,11 +9,11 @@ body {
   margin: 0;
 }
 
-/* #root {
+#root {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-} */
+}
 
 .App {
   /* display: flex;
