@@ -21,6 +21,9 @@
             "vulling": "20",
             "echo_var": "20"
         },
+        "hhost_checks":[
+            "check_uptime"
+        ],
         "host_checks":[
             "check_uptime",
             "check_firewall_running",
