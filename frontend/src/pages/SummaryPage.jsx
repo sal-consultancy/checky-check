@@ -86,6 +86,8 @@ const CheckReport = ({ results, checks, theme }) => {
   }, [passedCount, failedCount]);
 
   useEffect(() => {
+    if (failedCount === 0) return;
+
     const theme = localStorage.getItem('theme');
     const borderColor = theme === 'dark' ? 'white' : 'black';
 
@@ -178,21 +180,30 @@ const CheckReport = ({ results, checks, theme }) => {
     return () => {
       barChart.destroy();
     };
-  }, [summary, checks]);
+  }, [summary, checks, failedCount]);
 
   return (
     <div className="check-report">
-      <h5 className='is-size-5 write py-5'>Failed Tests Overview</h5>
-      <div className="bar-chart-container" style={{ width: '100%', margin: '0 auto' }}>
-        <canvas ref={barChartRef}></canvas>
-      </div>
+      {failedCount > 0 ? (
+        <>
+          <h5 className='is-size-5 write py-5'>Failed Tests Overview</h5>
+          <div className="bar-chart-container" style={{ width: '100%', margin: '0 auto' }}>
+            <canvas ref={barChartRef}></canvas>
+          </div>
+        </>
+      ) : (
+        <div style={{ textAlign: 'center', margin: '20px 0' }}>
+          <h5 className='is-size-5 write py-5'>All checks passed successfully!</h5>
+          <h3 className='is-size-2 write py-5'> 🎉 🙌</h3>
+        </div>
+        
+      )}
+        <hr className="separator" />
 
       <h5 className='is-size-5 write py-5'>Passed vs Failed Checks</h5>
       <div className="pie-chart-container" style={{ width: '50%', margin: '0 auto' }}>
         <canvas ref={pieChartRef}></canvas>
       </div>
-
-     
     </div>
   );
 };
