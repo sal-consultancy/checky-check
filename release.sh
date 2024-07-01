@@ -3,6 +3,7 @@ RELEASE=$(cat version.txt)
 git tag "v${RELEASE}"
 git-chglog -o CHANGELOG.md
 cd frontend
+npm install
 npm run build
 cd ..
 
