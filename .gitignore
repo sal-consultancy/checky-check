@@ -6,3 +6,4 @@ results.json
 *.zip
 *.log
 tmp/
+config*.json
