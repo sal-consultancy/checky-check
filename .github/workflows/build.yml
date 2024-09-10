@@ -14,42 +14,42 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.23.1'  # Pas aan naar jouw Go-versie
+    # - name: Set up Go
+    #   uses: actions/setup-go@v4
+    #   with:
+    #     go-version: '1.23.1'  # Pas aan naar jouw Go-versie
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '22.8'  # Pas aan naar jouw Node.js versie
+    # - name: Set up Node.js
+    #   uses: actions/setup-node@v3
+    #   with:
+    #     node-version: '22.8'  # Pas aan naar jouw Node.js versie
 
-    - name: Install frontend dependencies
-      working-directory: ./frontend
-      run: npm install
+    # - name: Install frontend dependencies
+    #   working-directory: ./frontend
+    #   run: npm install
 
-    - name: Build frontend
-      working-directory: ./frontend
-      run: npm run build
+    # - name: Build frontend
+    #   working-directory: ./frontend
+    #   run: npm run build
 
-    - name: Compile for Windows
-      run: |
-        GOOS=windows GOARCH=amd64 \
-        FILE=checkycheck-${{ github.sha }}-windows-amd64 \
-        go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
-        zip ${FILE}.zip ${FILE}.exe
+    # - name: Compile for Windows
+    #   run: |
+    #     GOOS=windows GOARCH=amd64 \
+    #     FILE=checkycheck-${{ github.sha }}-windows-amd64 \
+    #     go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+    #     zip ${FILE}.zip ${FILE}.exe
 
-    - name: Compile for macOS
-      run: |
-        GOOS=darwin GOARCH=arm64 \
-        FILE=checkycheck-${{ github.sha }}-darwin-arm64 \
-        go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
-        zip ${FILE}.zip ${FILE}.exe
+    # - name: Compile for macOS
+    #   run: |
+    #     GOOS=darwin GOARCH=arm64 \
+    #     FILE=checkycheck-${{ github.sha }}-darwin-arm64 \
+    #     go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+    #     zip ${FILE}.zip ${FILE}.exe
 
     - name: Run semantic-release
       id: semantic_release  # Dit ID kunnen we gebruiken om de versie of tag te verkrijgen
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token voor authenticatie
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}  # GitHub token voor authenticatie
       run: |
         npm install
         npx semantic-release
