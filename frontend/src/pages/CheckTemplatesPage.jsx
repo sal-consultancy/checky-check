@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
 const CheckTemplatesPage = () => {
-  const [version, setVersion] = useState("");
-  const [copied, setCopied] = useState("");
+  const [copied, setCopied] = useState(""); // Status voor gekopieerde code
 
   const tests = [
     {
@@ -18,7 +17,7 @@ const CheckTemplatesPage = () => {
     "timeout": "5s",
     "graph": {
       "title": "Uptime per server",
-      "type": "bar_grouped_by_value",
+      "type": "bar_grouped_by_value"
     },
     "fail_when": ">",
     "fail_value": "100"
@@ -36,7 +35,7 @@ const CheckTemplatesPage = () => {
     "timeout": "5s",
     "graph": {
       "title": "Disk Space per server",
-      "type": "bar_grouped_by_value",
+      "type": "bar_grouped_by_value"
     },
     "fail_when": "<",
     "fail_value": "20G"
@@ -45,45 +44,51 @@ const CheckTemplatesPage = () => {
     }
   ];
 
-  useEffect(() => {
-    fetch("/api/version")
-      .then((response) => response.json())
-      .then((data) => setVersion(data.version))
-      .catch((error) => console.error("Error fetching version:", error));
-  }, []);
-
+  // Functie om bij te houden welke code is gekopieerd
   const handleCopy = (title) => {
     setCopied(title);
-    setTimeout(() => setCopied(""), 2000); // Reset copied state after 2 seconds
+    setTimeout(() => setCopied(""), 2000); // Reset status na 2 seconden
   };
 
+  // Functie om eventuele spaties aan het begin/einde van de code te verwijderen
   const trimCode = (code) => code.trim();
 
+  // Stijlen voor de codeblokken
   const customStyle = {
-    fontSize: '10px', // Ensure font size is applied
-    padding: '10px',
+    fontSize: '12px',
+    padding: '15px',
     borderRadius: '5px',
-    backgroundColor: '', // Set background to dark
-    border: '1px solid #ddd', // Outline the code block
-    color: '#f8f8f2' // Set text color to light for readability
+    backgroundColor: '#2d2d2d',
+    border: '1px solid #ddd',
+    color: '#f8f8f2'
   };
 
   return (
     <div>
       <h1 className="title my-6">Check Templates Page</h1>
-      <p>Welcome to the Check Templates Page. Here you can find several examples of checks that you can use in your application. Each example includes a button to easily copy the code to your clipboard.</p>
+      <p>
+        Welkom op de Check Templates Page. Hier vind je enkele voorbeelden van checks die je in je applicatie kunt gebruiken. 
+        Elk voorbeeld bevat een knop om de code gemakkelijk naar je klembord te kopiëren.
+      </p>
+
       <div className="has-text-left">
         {tests.map((test, index) => (
           <div key={index} className="mb-5">
             <h3 className="title is-4 mt-5">{test.title}</h3>
-            <SyntaxHighlighter language="json" customStyle={customStyle}>
+
+            {/* SyntaxHighlighter toont de code in een mooi format */}
+            <SyntaxHighlighter language="json" style={customStyle}>
               {trimCode(test.code)}
             </SyntaxHighlighter>
+
+            {/* Copy button */}
             <CopyToClipboard text={trimCode(test.code)} onCopy={() => handleCopy(test.title)}>
               <button className={`button is-dark is-small mt-2 ${copied === test.title ? "is-success" : ""}`}>
-                {copied === test.title ? "Copied" : "Copy to Clipboard"}
+                {copied === test.title ? "Gekopieerd" : "Kopieer naar klembord"}
               </button>
             </CopyToClipboard>
+
+            {/* Succesmelding bij gekopieerde code */}
             {copied === test.title && <p className="help is-success">Code is gekopieerd!</p>}
           </div>
         ))}
