@@ -47,8 +47,8 @@ jobs:
       run: |
         GOOS=darwin GOARCH=arm64 \
         FILE=checkycheck-${RELEASE}-darwin-arm64 \
-        go build -o ${FILE} main.go remote_check.go types.go helpers.go
-        zip ${FILE}.zip ${FILE}
+        go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+        zip ${FILE}.zip ${FILE}.exe
 
     - name: Run semantic-release
       env:
