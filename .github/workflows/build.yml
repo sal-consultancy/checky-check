@@ -33,9 +33,9 @@ jobs:
       working-directory: ./frontend
       run: npm run build
 
-    - name: Get the release version from version.txt
-      id: get_version
-      run: echo "RELEASE=$(cat version.txt)" >> $GITHUB_ENV
+    # - name: Get the release version from version.txt
+    #   id: get_version
+    #   run: echo "RELEASE=$(cat version.txt)" >> $GITHUB_ENV
 
     - name: Compile for Windows
       run: |
@@ -50,6 +50,10 @@ jobs:
         FILE=checkycheck-${RELEASE}-darwin-arm64 \
         go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
         zip ${FILE}.zip ${FILE}.exe
+
+    - name: Compile for macOS
+      run: |
+        npm install
 
     - name: Run semantic-release
       env:
