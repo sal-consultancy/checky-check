@@ -50,7 +50,9 @@ jobs:
       id: semantic_release  # Dit ID kunnen we gebruiken om de versie of tag te verkrijgen
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # GitHub token voor authenticatie
-      run: npx semantic-release
+      run: |
+        npm install
+        npx semantic-release
 
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
