@@ -28,7 +28,7 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
         npx standard-version
-        git push --follow-tags origin sl-release-workflow
+        git push --follow-tags origin ${{ github.ref_name }}
 
     # Upload de artifacten en maak een release op basis van de nieuwe tag
     - name: Create GitHub Release
@@ -47,7 +47,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: go.mod
-        asset_name: checkycheck-windows-amd64.zip
+        asset_name: checkycheck-windows-amd64-${{ github.ref_name }}.zip
         asset_content_type: application/zip
 
     # - name: Upload macOS build artifact
