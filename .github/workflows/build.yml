@@ -52,13 +52,13 @@ jobs:
       uses: actions/create-release@v1
       with:
         tag_name: ${{ steps.bump_version.outputs.version }}  # Gebruik de nieuwe versie tag
-        token: ${{ secrets.GIT_TOKEN }}
         release_name: Release v${{ steps.bump_version.outputs.version }}
         body: |
           Release notes for version ${{ steps.bump_version.outputs.version }}
         draft: false
         prerelease: false
-
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
       with:
