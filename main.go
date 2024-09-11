@@ -21,6 +21,8 @@ var content embed.FS
 
 var version string
 
+var AppVersion = "development" // Standaard versie voor lokale ontwikkeling
+
 func init() {
 	data, err := ioutil.ReadFile("version.txt")
 	if err != nil {
@@ -92,7 +94,6 @@ func serve(port int, configPath string) {
         w.Write(output)
     })
 
-	var AppVersion = "development" // Standaard versie voor lokale ontwikkeling
 
 	// Endpoint om de versie te serveren
 	http.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
