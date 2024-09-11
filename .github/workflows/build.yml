@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - dev
+      - sl-release-workflow2
 
 jobs:
   release:
@@ -22,36 +22,11 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    # # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
-    # - name: Bump version and generate changelog
-    #   run: |
-    #     git config --global user.name "GitHub Actions"
-    #     git config --global user.email "actions@github.com"
-    #     npx standard-version
-    #     git push --follow-tags origin ${{ github.ref_name }}
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-    # - name: Configure Git to use the GitHub token
-    #   run: |
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-    - name: Bump version and create Git tag
+    # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
+    - name: Bump version and generate changelog
       run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
         npx standard-version
-        npx standard-version
-        git push --follow-tags origin ${{ github.ref_name }} || git push --set-upstream origin ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-        
-    - name: Push changes
-      run: |
-        git push --follow-tags origin ${{ github.ref_name }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        git push --follow-tags origin sl-release-workflow
 
     # Upload de artifacten en maak een release op basis van de nieuwe tag
     - name: Create GitHub Release
@@ -64,23 +39,22 @@ jobs:
           Release notes for version ${{ steps.bump_version.outputs.version }}
         draft: false
         prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: go.mod
-        asset_name: checkycheck-windows-amd64-${{ github.ref_name }}.zip
+        asset_path: checkycheck-windows-amd64.zip
+        asset_name: checkycheck-windows-amd64.zip
         asset_content_type: application/zip
 
-    # - name: Upload macOS build artifact
-    #   uses: actions/upload-release-asset@v1
-    #   with:
-    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-    #     asset_path: checkycheck-darwin-arm64.zip
-    #     asset_name: checkycheck-darwin-arm64.zip
-    #     asset_content_type: application/zip
+    - name: Upload macOS build artifact
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: checkycheck-darwin-arm64.zip
+        asset_name: checkycheck-darwin-arm64.zip
+        asset_content_type: application/zip
 
 # name: Build and Release
 
