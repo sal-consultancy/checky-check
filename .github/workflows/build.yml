@@ -25,9 +25,9 @@ jobs:
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
       run: |
-        npx standard-version
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"
+        npx standard-version
         git push --follow-tags origin sl-release-workflow
 
     # Upload de artifacten en maak een release op basis van de nieuwe tag
