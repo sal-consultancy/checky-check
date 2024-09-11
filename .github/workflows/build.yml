@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - sl-release-workflow2
+      - dev
 
 jobs:
   release:
