@@ -7,48 +7,45 @@ const CheckTemplatesPage = () => {
 
   const tests = [
     {
-      "title": "Uptime",
-      "description": "Controleer of er een variabele gezet wordt in deze app",
-      "command": "uptime_value=$(uptime | awk '{print $3}' | tr -d ','); if echo $uptime_value | grep -qE '^[0-9]{1,2}:[0-9]{2}$'; then echo 0; else echo $uptime_value; fi",
-      "timeout": "5s",
-      "graph": {
-        "title": "Uptime per server",
-        "type": "bar_grouped_by_value"
+      title: "Uptime",
+      description: "Controleer of er een variabele gezet wordt in deze app",
+      command: "uptime_value=$(uptime | awk '{print $3}' | tr -d ','); if echo $uptime_value | grep -qE '^[0-9]{1,2}:[0-9]{2}$'; then echo 0; else echo $uptime_value; fi",
+      timeout: "5s",
+      graph: {
+        title: "Uptime per server",
+        type: "bar_grouped_by_value"
       },
-      "fail_when": ">",
-      "fail_value": "100"
+      fail_when: ">",
+      fail_value: "100"
     },
     {
-      "title": "Disk Space",
-      "description": "Controleer of de beschikbare schijfruimte voldoende is",
-      "command": "df -h | grep /dev/sda1",
-      "timeout": "5s",
-      "graph": {
-        "title": "Disk Space per server",
-        "type": "bar_grouped_by_value"
+      title: "Disk Space",
+      description: "Controleer of de beschikbare schijfruimte voldoende is",
+      command: "df -h | grep /dev/sda1",
+      timeout: "5s",
+      graph: {
+        title: "Disk Space per server",
+        type: "bar_grouped_by_value"
       },
-      "fail_when": "<",
-      "fail_value": "20G"
+      fail_when: "<",
+      fail_value: "20G"
     },
     {
-      "title": "Uptime",
-      "description": "Controleer of er een variabele gezet wordt in deze app",
-      "command": "sudo -k; uptime_value=$(echo ${env.pass} | sudo -S -u sapadm uptime 2>/dev/null | awk '{print $3}' | tr -d ','); if echo $uptime_value | grep -qE '^[0-9]{1,2}:[0-9]{2}$'; then echo 0; else echo $uptime_value; fi",
-      "become_user": "sapadm",
-      "timeout": "5s",
-      "graph": {
-        "title": "Uptime per server",
-        "type": "bar_grouped_by_value",
-        "sshow": false,
-        "llegend": true,
-        "ccolors": {
-          "failed": ["blue"],
-          "passed": ["green"]
-        }
+       title:"Uptime",
+      description:"Controleer of er een variabele gezet wordt in deze app",
+      command: "sudo -k; uptime_value=$(echo lalapassword | sudo -S -u sapadm uptime 2>/dev/null | awk '{print $3}' | tr -d ','); if echo $uptime_value | grep -qE '^[0-9]{1,2}:[0-9]{2}$'; then echo 0; else echo $uptime_value; fi",
+      become_user: "sapadm",
+      timeout:"5s",
+      graph: {
+          title:"Uptime per server",
+          type: "bar_grouped_by_value",
+          sshow: false,
+          llegend: true,
+          ccolors: { "failed": [ "blue" ], "passed": [ "green" ] }
       },
-      "fail_when": ">",
-      "fail_value": "100"
-    }
+      fail_when: ">",
+      fail_value: "100"
+  }    
   ];
 
   // Functie om bij te houden welke code is gekopieerd
