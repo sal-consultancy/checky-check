@@ -19,6 +19,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23.1'  # Pas aan naar jouw Go-versie
+
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
@@ -26,6 +31,21 @@ jobs:
 
     - name: Install dependencies
       run: npm install
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: Compile for Windows
+      run: |
+        GOOS=windows GOARCH=amd64 \
+        FILE=checkycheck-${{ github.sha }}-windows-amd64 \
+        go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+        zip ${FILE}.zip ${FILE}.exe
 
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
@@ -51,7 +71,7 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
       with:
