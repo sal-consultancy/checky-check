@@ -43,7 +43,7 @@ jobs:
     - name: Compile for Windows
       run: |
         GOOS=windows GOARCH=amd64 \
-        FILE=checkycheck-${{ github.sha }}-windows-amd64 \
+        FILE=checkycheck-windows-amd64 \
         go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
         zip ${FILE}.zip ${FILE}.exe
 
