@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"encoding/json"
 )
 
 // Embed de gehele build directory
@@ -91,16 +92,13 @@ func serve(port int, configPath string) {
         w.Write(output)
     })
 
+	var AppVersion = "development" // Standaard versie voor lokale ontwikkeling
+
 	// Endpoint om de versie te serveren
 	http.HandleFunc("/api/version", func(w http.ResponseWriter, r *http.Request) {
-		version, err := ioutil.ReadFile("version.txt")
-		if err != nil {
-			log.Printf("Error reading version file: %v", err)
-			http.Error(w, "Could not read version file", http.StatusInternalServerError)
-			return
-		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(fmt.Sprintf(`{"version": "%s"}`, version)))
+		versionResponse := map[string]string{"version": AppVersion}
+		json.NewEncoder(w).Encode(versionResponse)
 	})
 
 	// Start de server

@@ -8,39 +8,27 @@ const CheckTemplatesPage = () => {
   const tests = [
     {
       title: "Uptime",
-      code: `
-{
-  "check_uptime": {
-    "title": "Uptime",
-    "description": "Controleer of er een variabele gezet wordt in deze app",
-    "command": "uptime | awk '{print $3}'",
-    "timeout": "5s",
-    "graph": {
-      "title": "Uptime per server",
-      "type": "bar_grouped_by_value"
-    },
-    "fail_when": ">",
-    "fail_value": "100"
-  }
-}`
+      description: "Controleer of er een variabele gezet wordt in deze app",
+      command: "uptime_value=$(uptime | awk '{print $3}' | tr -d ','); if echo $uptime_value | grep -qE '^[0-9]{1,2}:[0-9]{2}$'; then echo 0; else echo $uptime_value; fi",
+      timeout: "5s",
+      graph: {
+        title: "Uptime per server",
+        type: "bar_grouped_by_value"
+      },
+      fail_when: ">",
+      fail_value: "100"
     },
     {
       title: "Disk Space",
-      code: `
-{
-  "check_disk_space": {
-    "title": "Disk Space",
-    "description": "Controleer of de beschikbare schijfruimte voldoende is",
-    "command": "df -h | grep /dev/sda1",
-    "timeout": "5s",
-    "graph": {
-      "title": "Disk Space per server",
-      "type": "bar_grouped_by_value"
-    },
-    "fail_when": "<",
-    "fail_value": "20G"
-  }
-}`
+      description: "Controleer of de beschikbare schijfruimte voldoende is",
+      command: "df -h | grep /dev/sda1",
+      timeout: "5s",
+      graph: {
+        title: "Disk Space per server",
+        type: "bar_grouped_by_value"
+      },
+      fail_when: "<",
+      fail_value: "20G"
     }
   ];
 
@@ -78,11 +66,11 @@ const CheckTemplatesPage = () => {
 
             {/* SyntaxHighlighter toont de code in een mooi format */}
             <SyntaxHighlighter language="json" style={customStyle}>
-              {trimCode(test.code)}
+              {trimCode(JSON.stringify(test, null, 2))}
             </SyntaxHighlighter>
 
             {/* Copy button */}
-            <CopyToClipboard text={trimCode(test.code)} onCopy={() => handleCopy(test.title)}>
+            <CopyToClipboard text={trimCode(JSON.stringify(test, null, 2))} onCopy={() => handleCopy(test.title)}>
               <button className={`button is-dark is-small mt-2 ${copied === test.title ? "is-success" : ""}`}>
                 {copied === test.title ? "Gekopieerd" : "Kopieer naar klembord"}
               </button>
