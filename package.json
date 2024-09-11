@@ -1,6 +1,6 @@
 {
   "name": "checky-check",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "devDependencies": {
     "standard-version": "^9.5.0"
   }
