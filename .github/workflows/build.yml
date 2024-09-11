@@ -3,7 +3,7 @@ name: Release Go Project
 on:
   push:
     branches:
-      - main  # Dit is de branch waarop releases worden gemaakt
+      - dev  # Dit is de branch waarop releases worden gemaakt
 
 jobs:
   release:
