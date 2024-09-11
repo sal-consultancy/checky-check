@@ -1,5 +1,5 @@
 {
-  "branches": ["main","sl-release-workflow"],
+  "branches": ["main","dev"],
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
