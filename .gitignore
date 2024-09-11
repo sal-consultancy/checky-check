@@ -8,3 +8,4 @@ results.json
 tmp/
 config-*.json
 node_modules/*
+secrets

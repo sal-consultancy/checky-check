@@ -40,14 +40,6 @@ jobs:
       working-directory: ./frontend
       run: npm run build
 
-    - name: Compile for Windows
-      run: |
-        export FILE=checkycheck-windows-amd64
-        GOOS=windows GOARCH=amd64 go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
-        zip ${FILE}.zip ${FILE}.exe
-
-
-
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
       id: bump_version
@@ -64,6 +56,13 @@ jobs:
     - name: Get new tag
       id: get_tag
       run: echo "::set-output name=tag::$(git describe --tags --abbrev=0)"
+
+    - name: Compile for Windows
+      run: |
+        export FILE=checkycheck-windows-amd64
+        GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.AppVersion=${{ steps.get_tag.outputs.tag }}'" -o ${FILE}.exe main.go remote_check.go types.go helpers.go 
+        zip ${FILE}.zip ${FILE}.exe
+
 
     # Upload de artifacten en maak een release op basis van de nieuwe tag
     - name: Create GitHub Release
