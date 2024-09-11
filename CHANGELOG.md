@@ -1,3 +1,21 @@
+# Changelog
+
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [0.8.1](https://github.com/sal-consultancy/checky-check/compare/v4.3.1...v0.8.1) (2024-09-11)
+
+
+### Features
+
+* added automatic release functionality ([a09edc6](https://github.com/sal-consultancy/checky-check/commit/a09edc617402588ba86f15b1588c627f0dc57443))
+
+
+### Bug Fixes
+
+* adding rc config file ([078dbfa](https://github.com/sal-consultancy/checky-check/commit/078dbfa7e411e6013c17e60a3c09ce71c3ca72f7))
+* canged runtest and check template page ([a6cf27e](https://github.com/sal-consultancy/checky-check/commit/a6cf27edd6e72789353bed4edc83c806cd97af48))
+* removed unused variables ([5eba70c](https://github.com/sal-consultancy/checky-check/commit/5eba70c7e7b7948e6922b45951f37da3d7508c75))
+
 <a name="unreleased"></a>
 ## [Unreleased]
 
