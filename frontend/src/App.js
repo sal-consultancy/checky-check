@@ -11,7 +11,6 @@ import SummaryPage from './pages/SummaryPage';
 import RunTestsPage from './pages/RunTestsPage';  // Importeer de nieuwe component
 import CheckTemplatesPage from './pages/CheckTemplatesPage';  // Importeer de nieuwe component
 
-
 const App = () => {
   const [results, setResults] = useState({ checks: {}, results: {}, report: {} });
   const [theme, setTheme] = useState('light');
@@ -31,14 +30,21 @@ const App = () => {
     fetchResults();
   };
 
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
   return (
     <Router>
-      <div className="App">
-        <section className="hero is-light">
+      <div className={`App ${theme}`}>
+        <section className={`hero is-${theme}`}>
           <div className="hero-body">
             <img className='' src={heartIcon} alt="court icon" width="50"/>
             <p className="title">{results.report.title}</p>
             <p className="subtitle write">{results.report.subtitle}</p>
+            <button onClick={toggleTheme}>
+              Switch to {theme === 'light' ? 'Dark' : 'Light'} Theme
+            </button>
           </div>
         </section>
         <section>
@@ -53,8 +59,7 @@ const App = () => {
                   <Route path="/" element={<SummaryPage results={results.results} checks={results.checks} />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/templates" element={<CheckTemplatesPage />} />
-                  <Route path="/run-tests" element={<RunTestsPage onTestsComplete={handleTestsComplete} />} /> {/* Nieuwe route */}
-                  
+                  <Route path="/run-tests" element={<RunTestsPage onTestsComplete={handleTestsComplete} />} />
                 </Routes>
               </div>
             </div>

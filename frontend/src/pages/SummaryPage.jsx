@@ -21,8 +21,9 @@ const CheckReport = ({ results, checks, theme }) => {
     return acc;
   }, {});
 
-  const allHosts = Object.keys(results).map(host => {
-    const hostResults = results[host];
+  //const allHosts = Object.keys(results).map(host => {
+   Object.keys(results).map(host => {
+      const hostResults = results[host];
     return {
       host,
       results: Object.keys(hostResults).map(checkName => ({

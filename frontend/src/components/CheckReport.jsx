@@ -157,13 +157,14 @@ const CheckReport = ({ results, checks, theme }) => {
             <div className="check-section">
               <div className="check-header" style={{ display: 'flex', alignItems: 'center' }}>
                 <h4 className="is-size-4 write" id={checkName} style={{ flexGrow: 1, textAlign: 'center' }}>{check.title}</h4>
-                <a
-                  className='no-print'
-                  onClick={() => toggleDetails(checkName)}
-                  style={{ cursor: 'pointer', color: '#3273dc' }}
-                >
-                  {showDetails[checkName] ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
-                </a>
+                <button
+  className='no-print button is-small'
+  onClick={() => toggleDetails(checkName)}
+  style={{ cursor: 'pointer', color: '#3273dc', background: 'none', border: 'none' }}
+>
+  {showDetails[checkName] ? <FaChevronUp className="ml-2" /> : <FaChevronDown className="ml-2" />}
+</button>
+
               </div>
 
               <p className="is-size-6 has-text-left print-only">{check.description}</p>

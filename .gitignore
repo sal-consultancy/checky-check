@@ -7,3 +7,4 @@ results.json
 *.log
 tmp/
 config-*.json
+node_modules
