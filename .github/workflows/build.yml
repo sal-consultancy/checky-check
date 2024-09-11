@@ -28,7 +28,7 @@ jobs:
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"      
         npx standard-version
-        git push --follow-tags origin sl-release-workflow
+        git push --follow-tags origin dev
       env:
         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
     # Upload de artifacten en maak een release op basis van de nieuwe tag
