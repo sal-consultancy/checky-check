@@ -31,7 +31,8 @@ jobs:
         npx standard-version
         git push --follow-tags origin dev
       env:
-        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     # Upload de artifacten en maak een release op basis van de nieuwe tag
     - name: Create GitHub Release
       id: create_release
@@ -43,6 +44,8 @@ jobs:
           Release notes for version ${{ steps.bump_version.outputs.version }}
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
@@ -52,13 +55,13 @@ jobs:
         asset_name: checkycheck-windows-amd64.zip
         asset_content_type: application/zip
 
-    - name: Upload macOS build artifact
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: checkycheck-darwin-arm64.zip
-        asset_name: checkycheck-darwin-arm64.zip
-        asset_content_type: application/zip
+    # - name: Upload macOS build artifact
+    #   uses: actions/upload-release-asset@v1
+    #   with:
+    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+    #     asset_path: checkycheck-darwin-arm64.zip
+    #     asset_name: checkycheck-darwin-arm64.zip
+    #     asset_content_type: application/zip
 
 # name: Build and Release
 
