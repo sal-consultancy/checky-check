@@ -25,6 +25,7 @@ jobs:
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
       run: |
+        export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
         git config --global user.name "GitHub Actions"
         git config --global user.email "actions@github.com"      
         npx standard-version
