@@ -42,11 +42,11 @@ jobs:
 
     - name: Compile for Windows
       run: |
-        GOOS=windows GOARCH=amd64 \
-        FILE=checkycheck-windows-amd64 \
-        go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+        export FILE=checkycheck-windows-amd64
+        GOOS=windows GOARCH=amd64 go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
         zip ${FILE}.zip ${FILE}.exe
-        
+
+
 
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
