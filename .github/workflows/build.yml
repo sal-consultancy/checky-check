@@ -3,7 +3,12 @@ name: Build and Release
 on:
   push:
     branches:
-      - sl-release-workflow2
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   release:
@@ -14,6 +19,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23.1'  # Pas aan naar jouw Go-versie
+
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
@@ -22,33 +32,62 @@ jobs:
     - name: Install dependencies
       run: npm install
 
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm install
+
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: Compile for Windows
+      run: |
+        export FILE=checkycheck-windows-amd64
+        GOOS=windows GOARCH=amd64 go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+        zip ${FILE}.zip ${FILE}.exe
+
+
+
     # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
     - name: Bump version and generate changelog
+      id: bump_version
       run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
+        ls -ltra 
+        git config --global user.name "sjoerd-lubbers"
+        git config --global user.email "actions@github.com"      
         npx standard-version
-        git push --follow-tags origin sl-release-workflow
+        git push --follow-tags origin dev
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # Haal de nieuwe versie-tag op uit Git
+    - name: Get new tag
+      id: get_tag
+      run: echo "::set-output name=tag::$(git describe --tags --abbrev=0)"
 
     # Upload de artifacten en maak een release op basis van de nieuwe tag
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
       with:
-        tag_name: ${{ steps.bump_version.outputs.version }}  # Gebruik de nieuwe versie tag
-        release_name: Release v${{ steps.bump_version.outputs.version }}
+        tag_name: ${{ steps.get_tag.outputs.tag }}  # Gebruik de nieuwe versie tag
+        release_name: Release ${{ steps.get_tag.outputs.tag }}
         body: |
-          Release notes for version ${{ steps.bump_version.outputs.version }}
+          Release notes for version ${{ steps.get_tag.outputs.tag }}
         draft: false
         prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload Windows build artifact
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: go.mod
+        asset_path: checkycheck-windows-amd64.zip
         asset_name: checkycheck-windows-amd64.zip
         asset_content_type: application/zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # - name: Upload macOS build artifact
     #   uses: actions/upload-release-asset@v1
