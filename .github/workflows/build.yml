@@ -1,42 +1,141 @@
-name: Release Go Project
+name: Build and Release
 
 on:
   push:
     branches:
-      - dev  # Dit is de branch waarop releases worden gemaakt
+      - dev
 
 permissions:
   contents: write
   issues: write
   pull-requests: write
-  
+
 jobs:
   release:
+    name: Build, Test, and Release
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.23
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '22.8.0'
-          
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '22.8'
 
-      - name: Install semantic-release
-        run: npm install -g semantic-release @semantic-release/changelog @semantic-release/github @semantic-release/git
+    - name: Install dependencies
+      run: npm install
 
-      - name: Run semantic-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          semantic-release
+    # Voer standard-version uit om de nieuwe versie te bepalen en tag aan te maken
+    - name: Bump version and generate changelog
+      run: |
+        export GITHUB_TOKEN=${{ secrets.GIT_TOKEN }}
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "actions@github.com"      
+        npx standard-version
+        git push --follow-tags origin dev
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    # Upload de artifacten en maak een release op basis van de nieuwe tag
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ steps.bump_version.outputs.version }}  # Gebruik de nieuwe versie tag
+        release_name: Release v${{ steps.bump_version.outputs.version }}
+        body: |
+          Release notes for version ${{ steps.bump_version.outputs.version }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload Windows build artifact
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: checkycheck-windows-amd64.zip
+        asset_name: checkycheck-windows-amd64.zip
+        asset_content_type: application/zip
+
+    # - name: Upload macOS build artifact
+    #   uses: actions/upload-release-asset@v1
+    #   with:
+    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+    #     asset_path: checkycheck-darwin-arm64.zip
+    #     asset_name: checkycheck-darwin-arm64.zip
+    #     asset_content_type: application/zip
+
+# name: Build and Release
+
+# on:
+#   push:
+#     branches:
+#       - sl-release-workflow
+
+# jobs:
+#   release:
+#     name: Build, Test, and Release
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
+
+#     # - name: Set up Go
+#     #   uses: actions/setup-go@v4
+#     #   with:
+#     #     go-version: '1.23.1'  # Pas aan naar jouw Go-versie
+
+#     - name: Set up Node.js
+#       uses: actions/setup-node@v3
+#       with:
+#         node-version: '22.8'  # Pas aan naar jouw Node.js versie
+
+#     # - name: Install frontend dependencies
+#     #   working-directory: ./frontend
+#     #   run: npm install
+
+#     # - name: Build frontend
+#     #   working-directory: ./frontend
+#     #   run: npm run build
+
+#     # - name: Compile for Windows
+#     #   run: |
+#     #     GOOS=windows GOARCH=amd64 \
+#     #     FILE=checkycheck-${{ github.sha }}-windows-amd64 \
+#     #     go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+#     #     zip ${FILE}.zip ${FILE}.exe
+
+#     # - name: Compile for macOS
+#     #   run: |
+#     #     GOOS=darwin GOARCH=arm64 \
+#     #     FILE=checkycheck-${{ github.sha }}-darwin-arm64 \
+#     #     go build -o ${FILE}.exe main.go remote_check.go types.go helpers.go
+#     #     zip ${FILE}.zip ${FILE}.exe
+
+#     - name: Run semantic-release
+#       id: semantic_release  # Dit ID kunnen we gebruiken om de versie of tag te verkrijgen
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}  # GitHub token voor authenticatie
+#       run: |
+#         npm install
+#         npx semantic-release
+
+#     - name: Upload Windows build artifact
+#       uses: actions/upload-release-asset@v1
+#       with:
+#         upload_url: ${{ steps.semantic_release.outputs.upload_url }}  # Gebruik de output van semantic-release
+#         asset_path: checkycheck-${{ github.sha }}-windows-amd64.zip
+#         asset_name: checkycheck-${{ github.sha }}-windows-amd64.zip
+#         asset_content_type: application/zip
+
+#     - name: Upload macOS build artifact
+#       uses: actions/upload-release-asset@v1
+#       with:
+#         upload_url: ${{ steps.semantic_release.outputs.upload_url }}  # Gebruik de output van semantic-release
+#         asset_path: checkycheck-${{ github.sha }}-darwin-arm64.zip
+#         asset_name: checkycheck-${{ github.sha }}-darwin-arm64.zip
+#         asset_content_type: application/zip
