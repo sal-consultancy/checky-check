@@ -1,3 +1,5 @@
+[![Build and Release](https://github.com/sal-consultancy/checky-check/actions/workflows/build.yml/badge.svg)](https://github.com/sal-consultancy/checky-check/actions/workflows/build.yml)
+
 # CheckyCheck
 
 Monitor hundreds of virtual machines by executing a single binary.
