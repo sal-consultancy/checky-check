@@ -55,12 +55,12 @@ jobs:
     # Haal de nieuwe versie-tag op uit Git
     - name: Get new tag
       id: get_tag
-      run: echo "::set-output name=tag::$(git describe --tags --abbrev=0)"
+      run: echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
 
     - name: Compile for Windows
       run: |
-        export FILE=checkycheck-windows-amd64
-        GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.AppVersion=${{ steps.get_tag.outputs.tag }}'" -o ${FILE}.exe main.go remote_check.go types.go helpers.go 
+        export FILE=checkycheck-${{ env.tag }}-windows-amd64
+        GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.AppVersion=${{ env.tag }}'" -o ${FILE}.exe main.go remote_check.go types.go helpers.go 
         zip ${FILE}.zip ${FILE}.exe
 
 
@@ -69,10 +69,10 @@ jobs:
       id: create_release
       uses: actions/create-release@v1
       with:
-        tag_name: ${{ steps.get_tag.outputs.tag }}  # Gebruik de nieuwe versie tag
-        release_name: Release ${{ steps.get_tag.outputs.tag }}
+        tag_name: ${{ env.tag }}
+        release_name: Release ${{ env.tag }}
         body: |
-          Release notes for version ${{ steps.get_tag.outputs.tag }}
+          Release notes for version ${{ env.tag }}
         draft: false
         prerelease: false
       env:
@@ -82,8 +82,8 @@ jobs:
       uses: actions/upload-release-asset@v1
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: checkycheck-windows-amd64.zip
-        asset_name: checkycheck-windows-amd64.zip
+        asset_path: checkycheck-${{ env.tag }}-windows-amd64.zip
+        asset_name: checkycheck-${{ env.tag }}-windows-amd64.zip
         asset_content_type: application/zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
