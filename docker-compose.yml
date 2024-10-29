@@ -1,0 +1,23 @@
+version: '3.8'  # Zorg ervoor dat je de juiste versie gebruikt
+
+services:
+  goapi:
+    image: golang:1.23-bookworm
+    container_name: goapi
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+    command: sh -c "go run main.go remote_check.go types.go helpers.go -mode=serve -config=config-sal-min.json -port=8070"
+    ports:
+      - "8070:8070"
+
+  webapp:
+    image: node:18-alpine
+    container_name: node_react_webapp
+    working_dir: /usr/src/app
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: sh -c "npm install && npm start"
+    ports:
+      - "3000:3000"

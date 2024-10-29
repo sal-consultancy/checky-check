@@ -2,7 +2,7 @@
   "name": "gojenkinsstats-frontend",
   "version": "0.1.0",
   "private": true,
-  "proxy": "http://localhost:8070",
+  "proxy": "http://goapi:8070",
   "dependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
@@ -22,7 +22,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "WATCHPACK_POLLING=true react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
