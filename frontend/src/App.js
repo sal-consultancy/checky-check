@@ -30,9 +30,7 @@ const App = () => {
     fetchResults();
   };
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
-  };
+
 
   return (
     <Router>
@@ -42,9 +40,6 @@ const App = () => {
             <img className='' src={heartIcon} alt="court icon" width="50"/>
             <p className="title">{results.report.title}</p>
             <p className="subtitle write">{results.report.subtitle}</p>
-            <button onClick={toggleTheme}>
-              Switch to {theme === 'light' ? 'Dark' : 'Light'} Theme
-            </button>
           </div>
         </section>
         <section>
