@@ -13,7 +13,7 @@ import CheckTemplatesPage from './pages/CheckTemplatesPage';  // Importeer de ni
 
 const App = () => {
   const [results, setResults] = useState({ checks: {}, results: {}, report: {} });
-  const [theme, setTheme] = useState('light');
+  const [theme] = useState('light');
 
   const fetchResults = () => {
     fetch('/results')

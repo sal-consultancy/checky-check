@@ -6,7 +6,7 @@ const Footer = ({ copyright }) => {
     <footer className="footer">
       <div className="content has-text-centered">
         <p>{copyright}</p>
-        <p><a style={{ color: 'grey' }} target="_blank" href="https://github.com/sal-consultancy/checky-check"><FaGithub /> Github</a></p>
+        <p><a style={{ color: 'grey' }} target="_blank" rel="noreferrer" href="https://github.com/sal-consultancy/checky-check"><FaGithub /> Github</a></p>
       </div>
     </footer>
   );
