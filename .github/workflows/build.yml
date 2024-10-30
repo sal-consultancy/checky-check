@@ -27,7 +27,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '22.8' 
+        node-version: '22.8'
 
     - name: Install dependencies
       run: npm install
@@ -44,9 +44,9 @@ jobs:
     - name: Bump version and generate changelog
       id: bump_version
       run: |
-        ls -ltra 
+        ls -ltra
         git config --global user.name "sjoerd-lubbers"
-        git config --global user.email "actions@github.com"      
+        git config --global user.email "actions@github.com"
         npx standard-version
         git push --follow-tags origin main
       env:
@@ -60,7 +60,7 @@ jobs:
     - name: Compile for Windows
       run: |
         export FILE=checkycheck-${{ env.tag }}-windows-amd64
-        GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.AppVersion=${{ env.tag }}'" -o ${FILE}.exe main.go remote_check.go types.go helpers.go 
+        GOOS=windows GOARCH=amd64 go build -ldflags="-X 'main.AppVersion=${{ env.tag }}'" -o ${FILE}.exe main.go remote_check.go types.go helpers.go
         zip ${FILE}.zip ${FILE}.exe
 
 
