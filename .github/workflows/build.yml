@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     branches:
-      - release/**  # Alleen releases via branches die beginnen met 'release/'
+      - main
 
 permissions:
   contents: write
