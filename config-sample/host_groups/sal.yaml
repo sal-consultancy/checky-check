@@ -1,0 +1,10 @@
+host_groups:
+  sal-1:
+    host_vars:
+      sap:
+        sid: PRD
+    hosts:
+      dos.salconsultancy.nl:
+        host_template: sap_app_server
+        host_checks:
+          - check_sap_instance

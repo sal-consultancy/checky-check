@@ -1,0 +1,69 @@
+identities:
+  id1:
+    user: checkycheck
+    key: secrets/id_rsa
+    passphrase: ${env.cc_passphrase}
+
+host_defaults:
+  identity: id1
+  host_vars:
+    monitoring:
+      timezone: Europe/Amsterdam
+  check_groups:
+    - sap_os
+
+host_templates:
+  sap_app_server:
+    host_vars:
+      sap:
+        sid: ECC
+    check_groups:
+      - sap_app
+
+check_groups:
+  sap_os:
+    vars:
+      sap:
+        instance_nr: "00"
+    checks:
+      - check_uptime
+  sap_app:
+    vars:
+      sap:
+        profile_path: /usr/sap/${sap.sid}/SYS/profile
+    checks:
+      - check_sap_profile_dir
+
+checks:
+  check_uptime:
+    title: Uptime
+    description: Controleer de uptime van de host
+    command: "uptime | awk '{print $3}'"
+    fail_when: ">"
+    fail_value: "90"
+
+  check_sap_profile_dir:
+    title: SAP Profile Directory
+    description: Controleer of de profile directory bestaat
+    command: "test -d ${sap.profile_path} && echo OK || echo NOK"
+    fail_when: "!="
+    fail_value: OK
+    vars:
+      sap:
+        profile_path: /usr/sap/${sap.sid}/SYS/profile
+
+host_groups:
+  sal-1:
+    host_vars:
+      sap:
+        sid: PRD
+    hosts:
+      dos.salconsultancy.nl:
+        host_template: sap_app_server
+
+report:
+  title: SALl
+  subtitle: Controle SAL Omgeving
+  copyright: Alle rechten voorbehouden SAL CONSULTANCY 2026.
+  description: Dit rapport toont specifieke testen die gestructureerd en geautomatiseerd uitgevoerd worden.
+  css: "body { font-family: Arial, sans-serif; } h1 { color: blue; }"

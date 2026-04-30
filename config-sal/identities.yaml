@@ -1,0 +1,5 @@
+identities:
+  cc1:
+    user: checkycheck
+    key: secrets/id_rsa
+    passphrase: ${env.cc_passphrase}

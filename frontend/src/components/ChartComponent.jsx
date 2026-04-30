@@ -1,6 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import { Chart } from 'chart.js/auto';
-import 'chartjs-plugin-roughness';
+
+const DEFAULT_CHART_COLORS = {
+  failed: ['#a44b4b'],
+  passed: ['#6aa36d'],
+};
+
+const DEFAULT_BORDER_COLORS = {
+  failed: ['#8f3c3c'],
+  passed: ['#4d8650'],
+};
 
 const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
   const chartRef = useRef(null);
@@ -14,9 +23,21 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
     const theme = localStorage.getItem('theme');
 
     const borderColor = theme === 'dark' ? 'white' : 'black';
+    const palette = {
+      failed: colors?.failed?.length ? colors.failed : DEFAULT_CHART_COLORS.failed,
+      passed: colors?.passed?.length ? colors.passed : DEFAULT_CHART_COLORS.passed,
+    };
 
     const backgroundColors = data.map((value, index) => {
-      return value.failed > 0 ? colors.failed[index % colors.failed.length] : colors.passed[index % colors.passed.length];
+      return value.failed > 0
+        ? palette.failed[index % palette.failed.length]
+        : palette.passed[index % palette.passed.length];
+    });
+
+    const borderColors = data.map((value, index) => {
+      return value.failed > 0
+        ? DEFAULT_BORDER_COLORS.failed[index % DEFAULT_BORDER_COLORS.failed.length]
+        : DEFAULT_BORDER_COLORS.passed[index % DEFAULT_BORDER_COLORS.passed.length];
     });
 
     const datasets = [
@@ -24,7 +45,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
         label: 'Values',
         data: data.map(d => d.value),
         backgroundColor: backgroundColors,
-        borderColor: borderColor,
+        borderColor: type === 'pie' ? borderColor : borderColors,
         borderWidth: type === 'pie' ? '0.4' : '0.8' ,
       },
     ];
@@ -37,21 +58,9 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
       },
       options: {
         plugins: {
-          roughness: {
-            disabled: false,
-            fillStyle: 'hachure',
-            fillWeight: 0.8,
-            roughness: 1.2,
-            hachureGap: 3.8,
-          },
           legend: {
             display: type === 'pie',
             position: 'right',
-            labels: {
-              font: {
-                family: 'as-virgil',
-              },
-            },
           },
         },
         scales: {
@@ -59,11 +68,6 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
             display: type !== 'pie',
             grid: {
               display: false,
-            },
-            ticks: {
-              font: {
-                family: 'as-virgil',
-              },
             },
           },
           y: {
@@ -73,10 +77,6 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
             },
             ticks: {
               stepSize: 1,
-
-              font: {
-                family: 'as-virgil',
-              },
             },
             beginAtZero: true,
           },
@@ -92,7 +92,7 @@ const ChartComponent = ({ data, labels, title, theme, type, colors }) => {
   }, [data, labels, theme, type, colors]);
 
   return (
-    <div style={{ width: type === 'pie' ? '75%' : '90%' }}>
+    <div className={`report-chart-shell ${type === 'pie' ? 'is-pie' : 'is-standard'}`}>
       <h3 className='write'>{title}</h3>
       <canvas ref={chartRef}></canvas>
     </div>

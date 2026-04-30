@@ -1,44 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const RunTestsPage = ({ onTestsComplete }) => {
-  const [loading, setLoading] = useState(false); // Houdt bij of de tests bezig zijn
-  const [output, setOutput] = useState(''); // Houdt de uitvoer van de tests bij
+  const [loading, setLoading] = useState(false);
+  const [output, setOutput] = useState('');
+  const [hasRun, setHasRun] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    const runTests = async () => {
-      setLoading(true);  // Zet de laadstatus op 'true'
-      setOutput('');     // Reset de uitvoer
+  const runTests = async () => {
+    setLoading(true);
+    setHasRun(true);
+    setOutput('');
+    setErrorMessage('');
 
-      try {
-        const response = await fetch('/run-tests', { method: 'POST' }); // Stuur het verzoek naar de server
-        const reader = response.body.getReader(); // Lees de response stream
-        const decoder = new TextDecoder('utf-8');
-        let done = false;
+    try {
+      const response = await fetch('/run-tests', { method: 'POST' });
 
-        while (!done) {
-          const { value, done: readerDone } = await reader.read(); // Lees stukjes data
-          done = readerDone;
-          const chunk = decoder.decode(value, { stream: true }); // Decodeer de data
-          setOutput(prevOutput => prevOutput + chunk); // Voeg de data toe aan de output
-        }
-
-        onTestsComplete(); // Roep de callback aan om resultaten opnieuw op te halen
-
-      } catch (error) {
-        console.error('Error running tests:', error); // Log fouten
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'The test run failed.');
       }
 
-      setLoading(false); // Zet de laadstatus terug op 'false'
-    };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
 
-    runTests(); // Voer de tests uit wanneer de component wordt geladen
-  }, [onTestsComplete]); // Voeg onTestsComplete toe als dependency, omdat dit een prop is
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          setOutput(prevOutput => prevOutput + chunk);
+        }
+      }
+
+      onTestsComplete();
+    } catch (error) {
+      console.error('Error running tests:', error);
+      setErrorMessage(error.message || 'The test run failed.');
+    }
+
+    setLoading(false);
+  };
 
   return (
     <div>
-      <h2>Running Tests</h2>
-      {loading ? <p>Loading...</p> : <p>Tests completed.</p>} {/* Toon de status van het laden */}
-      <pre>{output}</pre> {/* Toon de uitvoer van de tests */}
+      <h2 className="title is-4">Run Checks</h2>
+      <p className="mb-4 has-text-left">
+        Start a new run manually. When the run finishes, the latest results are reloaded automatically.
+      </p>
+      <div className="buttons">
+        <button className={`button is-dark ${loading ? 'is-loading' : ''}`} onClick={runTests} disabled={loading}>
+          {loading ? 'Running Checks' : 'Run Checks Now'}
+        </button>
+      </div>
+      {loading && <p className="has-text-left">Checks are running. Output will appear below.</p>}
+      {!loading && hasRun && !errorMessage && <p className="has-text-left">Checks completed.</p>}
+      {errorMessage && (
+        <div className="notification is-danger is-light has-text-left">
+          <strong>Run failed.</strong>
+          <div className="mt-2">{errorMessage}</div>
+        </div>
+      )}
+      <pre className="has-text-left">{output}</pre>
     </div>
   );
 };

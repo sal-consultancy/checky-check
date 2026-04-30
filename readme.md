@@ -2,240 +2,223 @@
 
 # CheckyCheck
 
-Monitor hundreds of virtual machines by executing a single binary.
+CheckyCheck runs remote host checks over SSH, central URL checks from the controller, and renders the latest results in a small web UI.
 
-Like Ansible, it uses the SSH protocol to perform remote checks defined in the configuration file.
+Run history is stored in SQLite at `history/checkycheck_history.db`.
 
-There is one configuration file that manages the entire setup.
+## Configuration
 
-The configuration file should be managed using a version control system. For a production environment, this is mandatory.
+Configuration is YAML-only.
 
-CheckyCheck is written in Go and is started by executing one command. Optionally, additional parameters can be provided to use the program in different ways.
+- `-config config.yaml` loads one YAML file
+- `-config config/` loads and merges all `.yaml` and `.yml` files in that directory tree
+- duplicate names across merged files are rejected
 
-## Configuration File
+Typical top-level sections:
 
-The configuration file consists of:
+- `identities`
+- `host_defaults`
+- `host_templates`
+- `check_groups`
+- `checks`
+- `url_checks`
+- `host_groups`
+- `report`
 
-- identities
-- host_defaults
-- host_templates
-- checks
-- host_groups
+## Variables
 
-### Variables
+Checks can use placeholders such as `${sap.sid}` or `${url}`.
 
-You can use variables in the configuration file. 
+- host variables can be defined in `host_defaults`, `host_templates`, `host_groups`, and individual hosts
+- check groups can contribute default `vars`
+- environment variables can be referenced with `${env.NAME}`
+- nested variables are supported
 
-Variables are defined in the `host_vars`. These can be defined in the host_templates, host_groups and in the host self.
+## Check Groups
 
-You can use variables `${url}` in the checks.
+Checks can be grouped and reused from:
 
-You can also use environment variables, these are prefixed with `env.`, for example `${env.id_rsa_passphrase}`.
+- `host_defaults`
+- `host_templates`
+- `host_groups`
+- individual hosts
 
-### Identities
+Example:
 
-You can provide identities in three ways:
-
-#### SSH Private Key Authentication
-
-Your key can be located anywhere.
-
-```json
-"ssh": {
-    "user": "username",
-    "key": "keys/id_rsa"
-}
+```yaml
+check_groups:
+  sap_os:
+    vars:
+      thresholds:
+        disk_root: "80"
+    checks:
+      - check_disk_root_usage
+      - check_failed_systemd_units
 ```
 
-#### SSH Private Key Authentication with Passphrase
+## Example Structure
 
-```json
-"ssh": {
-    "user": "username",
-    "key": "keys/id_rsa_username",
-    "passphrase": "xxx"
-}
+```text
+config/
+  identities.yaml
+  host_defaults.yaml
+  report.yaml
+  check_groups.yaml
+  checks/
+    base.yaml
+    sap.yaml
+  host_templates/
+    sap.yaml
+  host_groups/
+    production.yaml
+  url_checks.yaml
 ```
 
-#### Username and Password
+Multiple checks may live in the same file.
 
-You can also use simple username and password authentication. Be careful not to store passwords in a version management system.
+## Identities
 
-```json
-"ssh": {
-    "user": "username",
-    "password": "password"
-}
+### SSH key
+
+```yaml
+identities:
+  ssh_key:
+    user: username
+    key: keys/id_rsa
 ```
 
-### Host Defaults
+### SSH key with passphrase
 
-Default settings for hosts can be defined here and overridden by specific hosts if needed.
-
-```json
-"host_defaults": {
-    "timeout": "30s",
-    "retry_interval": "10s",
-    "max_retries": 3
-}
+```yaml
+identities:
+  ssh_key:
+    user: username
+    key: keys/id_rsa
+    passphrase: ${env.CC_PASSPHRASE}
 ```
 
-### Host Templates
+### Username and password
 
-Templates for common host configurations can be defined here.
-
-```json
-"host_templates": {
-    "web_server": {
-        "port": 22,
-        "user": "webadmin",
-        "identity": "keys/webadmin_id_rsa"
-    },
-    "db_server": {
-        "port": 22,
-        "user": "dbadmin",
-        "identity": "keys/dbadmin_id_rsa"
-    }
-}
+```yaml
+identities:
+  ssh_password:
+    user: username
+    password: ${env.CC_PASSWORD}
 ```
 
-### Host Groups
+## Host Checks
 
-Define groups of hosts for easier management and checking.
+Host checks live under `checks:` and run over SSH unless `local: true` is set.
 
-```json
-"host_groups": {
-    "production": [
-        "web1.example.com",
-        "web2.example.com",
-        "db1.example.com"
-    ],
-    "staging": [
-        "staging-web1.example.com",
-        "staging-db1.example.com"
-    ]
-}
+### Command check
+
+```yaml
+checks:
+  check_uptime:
+    title: Uptime
+    command: uptime | awk '{print $3}'
+    fail_when: ">"
+    fail_value: "90"
 ```
 
-## Starting CheckyCheck
+### Service check
 
-If you don't have any `results.json` yet, run the application first in check mode:
-
-```sh
-checkycheck.exe -config=config.json -mode=check
+```yaml
+checks:
+  check_firewall_running:
+    title: Firewall
+    service: ufw
+    fail_when: "="
+    fail_value: "0"
 ```
 
-Next, you can launch the GUI:
+### Multiple fail values
 
-```sh
-checkycheck.exe -port=8071 -config=config.json -mode=serve
+```yaml
+checks:
+  check_example:
+    title: Example
+    command: echo "${status}"
+    fail_when: "!="
+    fail_value: ["200", "302"]
 ```
 
-## Types of Checks
+## URL Checks
 
-All checks must be present under the "checks" key in `config.json`.
+Central website checks live under `url_checks:` and always run from the CheckyCheck controller.
 
-### Local Checks
-
-Some checks are performed locally. Use the `local` option in the check.
-
-```json
-"check_url": {
-    "description": "Check if a variable is set in this app",
-    "graph": {
-        "title": "Variable",
-        "type": "bar_grouped_by_value"
-    },
-    "command": "curl -X GET -o /dev/null -s -w \"%{http_code}\" -I ${url}",
-    "fail_when": "!=",
-    "fail_value": "200",
-    "local": true
-}
+```yaml
+url_checks:
+  check_laddio_url:
+    title: Laddio.nl
+    url: ${url}
+    fail_when: "!="
+    fail_value: ["200", "302"]
+    timeout: 15s
+    follow_redirects: false
+    expected_contains: Laddio
+    vars:
+      url: https://laddio.nl
 ```
 
-### Service Checks
+URL checks store extra runtime details in `results.json`, including:
 
-A Linux service can be checked like this. You can also use a command for this; the choice is yours.
-
-```json
-"check_firewall_running": {
-    "description": "Check if the firewall service is running",
-    "graph": {
-        "title": "Firewall Status",
-        "type": "bar_grouped_by_value"
-    },
-    "service": "ufw",
-    "fail_when": "=",
-    "fail_value": "0"
-}
-```
-
-### Multiple Fail Values
-
-You can specify multiple fail values.
-
-```json
-"check_url": {
-    "description": "Check if a variable is set in this app",
-    "graph": {
-        "title": "Variable",
-        "type": "bar_grouped_by_value"
-    },
-    "command": "curl -X GET -o /dev/null -s -w \"%{http_code}\" -I ${url}",
-    "fail_when": "!=",
-    "fail_value": ["200", "300"],
-    "local": true
-}
-```
+- HTTP status code
+- latency in milliseconds
+- redirect location or final URL
+- technical error type such as DNS, TLS, timeout, or request failure
 
 ## Check Options
 
-| Parameter   | Description                             | Default |
-|-------------|-----------------------------------------|---------|
-| title       | Title of the check                      |         |
-| description | Description of the check                |         |
-| timeout     | Timeout setting for the specific check  | 30s     |
-| local       | Is this check executed locally on the CheckyCheck host | false |
+| Parameter | Description | Default |
+|---|---|---|
+| `title` | Display name of the check | |
+| `description` | Extra explanation shown in the UI | |
+| `timeout` | Per-check timeout | `30s` |
+| `local` | Run a command locally on the controller | `false` |
+| `vars` | Variables available to the check | |
+| `graph` | Graph settings for host-based report charts | |
+| `url` | Native HTTP/HTTPS target for a URL check | |
+| `follow_redirects` | Follow redirects for a URL check | `false` |
+| `expected_contains` | Require response body text for a URL check | |
+
+## Running
+
+Generate or refresh `results.json`:
+
+```sh
+checkycheck.exe -config=config-sal -mode=check
+```
+
+Serve the UI:
+
+```sh
+checkycheck.exe -port=8071 -config=config-sal -mode=serve
+```
+
+## History
+
+CheckyCheck stores lightweight history:
+
+- `runs`: one summary row per full run or targeted rerun
+- `events`: failures, recoveries, config errors, and targeted rerun results
+
+Retention defaults:
+
+- runs: 90 days
+- events: 30 days
 
 ## Development
 
-### Compiling for Windows
-
-Use the following command to create a Windows executable:
-
-```sh
-GOOS=windows GOARCH=amd64 go build -o gocheckycheck-win-amd64.exe -ldflags="-X 'main.AppVersion=v0.0.1'"
-```
-
-### Compiling for Apple M Series
-
-```sh
-GOOS=darwin GOARCH=arm64 go build -o gocheckycheck-macos-arm64 -ldflags="-X 'main.AppVersion=v0.0.1'"
-```
-
-### Creating a Zip File
-
-```sh
-zip gocheckycheck-win-amd64.zip gocheckycheck-win-amd64.exe
-```
-
-### Running Tests
-
-You can run tests to ensure the application is working correctly.
+Run tests:
 
 ```sh
 go test ./...
 ```
 
-### Contributing
+Build the frontend:
 
-If you wish to contribute to the development of CheckyCheck, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bugfix.
-3. Make your changes and ensure they are well-tested.
-4. Submit a pull request with a detailed description of your changes.
-
-### License
-
-CheckyCheck is released under the MIT License. See the LICENSE file for more details.
+```sh
+cd frontend
+npm run build
+```

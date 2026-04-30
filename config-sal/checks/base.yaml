@@ -1,0 +1,109 @@
+checks:
+  check_uptime:
+    title: Uptime
+    description: Controleer de uptime van de host
+    command: "uptime | awk '{print $3}'"
+    fail_when: ">"
+    fail_value: "90"
+
+  linux_version:
+    title: "Linux version"
+    description: "Geeft de huidige Linux versie weer die op de server draait."
+    command: awk -F= '/^NAME/ {name=$2} /^VERSION/ {version=$2} END {gsub(/"/, "", name); gsub(/"/, "", version); print name, version}' /etc/os-release
+    graph:
+      title: Aantal hosts per linux versie
+      type: bar
+    fail_when: "not in"
+    fail_value: ${allowed_linux_versions}
+    output_valid_for: 60
+    vars:
+      allowed_linux_versions: [ 'CentOS Stream 9' ]
+
+  linux_kernel_version:
+    title: "Linux kernel version"
+    description: "Geeft de huidige Linux kernel versie weer die op de server draait."
+    command: "uname -r"
+    graph:
+      title: Aantal hosts per linux kernel versie
+      type: bar
+    fail_when: "not in"
+    fail_value: ${allowed_linux_kernel_versions}
+    output_valid_for: 60
+    vars:
+      allowed_linux_kernel_versions: [ '5.14.0-378.el9.x86_64' ]
+
+  check_disk_root_usage:
+    title: Root Filesystem Usage
+    description: Controleer of het root-filesystem niet te vol loopt
+    command: "df -P / | awk 'NR==2 {gsub(/%/, \"\", $5); print $5}'"
+    fail_when: ">"
+    fail_value: "80"
+    graph:
+      title: Root filesystem usage by 10% range
+      type: bar_grouped_by_10_percentile
+
+  check_failed_systemd_units:
+    title: Failed Systemd Units
+    description: Controleer of er geen gefaalde systemd-units aanwezig zijn
+    command: "systemctl --failed --no-legend --no-pager 2>/dev/null | wc -l | awk '{print $1}'"
+    fail_when: ">"
+    fail_value: "0"
+
+  check_reboot_required:
+    title: Reboot Required
+    description: Controleer of de host een reboot nodig heeft na updates
+    command: |
+      if [ -f /var/run/reboot-required ] || [ -f /run/reboot-required ]; then
+        echo YES
+      else
+        echo NO
+      fi
+    fail_when: "="
+    fail_value: YES
+
+  check_time_sync:
+    title: Time Synchronization
+    description: Controleer of NTP of timesync actief en gesynchroniseerd is
+    command: |
+      if command -v timedatectl >/dev/null 2>&1; then
+        if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
+          echo OK
+        else
+          echo NOK
+        fi
+      elif systemctl is-active chronyd >/dev/null 2>&1 || systemctl is-active systemd-timesyncd >/dev/null 2>&1 || systemctl is-active ntpd >/dev/null 2>&1; then
+        echo OK
+      else
+        echo NOK
+      fi
+    fail_when: "!="
+    fail_value: OK
+
+  check_required_mounts:
+    title: Required Mounts
+    description: Controleer of alle verwachte mountpoints aanwezig zijn
+    command: |
+      missing_mounts=""
+      for required_mount in ${mounts.required}; do
+        if ! mountpoint -q "$required_mount"; then
+          missing_mounts="$missing_mounts $required_mount"
+        fi
+      done
+
+      if [ -z "$missing_mounts" ]; then
+        echo OK
+      else
+        echo "NOK:$missing_mounts"
+      fi
+    fail_when: "!="
+    fail_value: OK
+    vars:
+      mounts:
+        required: /usr/sap
+
+  check_firewalld:
+    title: Firewalld
+    description: Controleer of firewalld actief is
+    service: firewalld
+    fail_when: "="
+    fail_value: "0"

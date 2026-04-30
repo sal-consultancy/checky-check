@@ -1,0 +1,7 @@
+host_groups:
+  sal:
+    hosts:
+      uno.salconsultancy.nl:
+        host_template: sal_docker_ht
+      dos.salconsultancy.nl:
+        host_template: sal_docker_ht

@@ -1,7 +1,6 @@
 // src/components/HelpPage.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import ThemeToggle from "../components/ThemeToggle";
 
 const HelpPage = () => {
   const [version, setVersion] = useState("");
@@ -22,13 +21,10 @@ const HelpPage = () => {
           This is the help page for CheckyCheck. Here you can find information
           on how to use the application.
         </p>
-        <h3 className="title is-4 mt-5">Dark theme</h3>
+        <h3 className="title is-4 mt-5">Appearance</h3>
         <p>
-          With the button below you can change the theme from dark to light, 
-          and the other way around.
-        </p>
-        <p>
-          <ThemeToggle />
+          The theme selector is available in the header and supports system,
+          light and dark mode.
         </p>
         <h3 className="title is-4 mt-5">Refreshing data</h3>
         <p>
