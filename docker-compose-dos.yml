@@ -46,7 +46,7 @@ services:
       OAUTH2_PROXY_REDIRECT_URL: ${OAUTH2_PROXY_REDIRECT_URL}
     labels:
       - traefik.enable=true
-      - traefik.docker.network=traefik-public
+      - traefik.docker.network=traefik_web
       - traefik.http.routers.checkycheck-dos.rule=Host(`${CHECKYCHECK_HOST}`)
       - traefik.http.routers.checkycheck-dos.entrypoints=websecure
       - traefik.http.routers.checkycheck-dos.tls=true
@@ -54,10 +54,10 @@ services:
       - traefik.http.services.checkycheck-dos.loadbalancer.server.port=4180
     networks:
       - checkycheck-internal
-      - traefik-public
+      - traefik_web
 
 networks:
   checkycheck-internal:
     name: checkycheck-dos-internal
-  traefik-public:
+  traefik_web:
     external: true
