@@ -47,6 +47,7 @@ services:
       - traefik.http.routers.checkycheck-dos.rule=Host(`${CHECKYCHECK_HOST}`)
       - traefik.http.routers.checkycheck-dos.entrypoints=websecure
       - traefik.http.routers.checkycheck-dos.tls=true
+      - traefik.http.routers.checkycheck-dos.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
       - traefik.http.routers.checkycheck-dos.service=checkycheck-dos
       - traefik.http.services.checkycheck-dos.loadbalancer.server.port=4180
     networks:

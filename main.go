@@ -57,6 +57,12 @@ func main() {
 }
 
 func getCommand(configPath string) *exec.Cmd {
+	if executablePath, err := os.Executable(); err == nil {
+		if _, statErr := os.Stat(executablePath); statErr == nil {
+			return exec.Command(executablePath, "-mode=check", "-config="+configPath)
+		}
+	}
+
 	binaryName := fmt.Sprintf("checkycheck-%s-%s-%s", version, runtime.GOOS, runtime.GOARCH)
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
