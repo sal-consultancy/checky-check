@@ -944,6 +944,75 @@ code {
   font-weight: 700;
 }
 
+.diagnostics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.diagnostics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.diagnostics-subtitle {
+  color: var(--app-text-muted);
+  max-width: 760px;
+}
+
+.diagnostics-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.diagnostics-meta-card,
+.diagnostics-check-card {
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background: var(--app-surface);
+  padding: 1rem 1.1rem;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.diagnostics-meta-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-text-muted);
+}
+
+.diagnostics-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.diagnostics-check-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.diagnostics-check-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.diagnostics-check-message {
+  margin: 0.7rem 0 0;
+  color: var(--app-text-muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .history-modal-empty {
   margin-top: 0.75rem;
   color: var(--app-text-muted);
@@ -1072,6 +1141,12 @@ footer.footer .content p:last-child {
   .header-nav-list a {
     min-width: 0;
     width: auto;
+  }
+
+  .diagnostics-header,
+  .diagnostics-check-top {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .summary-metrics {

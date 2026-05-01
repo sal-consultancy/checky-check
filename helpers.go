@@ -1677,3 +1677,274 @@ func readCheckHistoryDetail(host string, checkName string, limit int) (CheckHist
 		Events:    events,
 	}, nil
 }
+
+func buildPreflightReport(configPath string) PreflightReport {
+	report := PreflightReport{
+		OverallStatus: "ok",
+		ConfigPath:    filepath.Clean(configPath),
+	}
+
+	if workingDir, err := os.Getwd(); err == nil {
+		report.WorkingDir = workingDir
+		report.Checks = append(report.Checks, PreflightCheck{
+			Name:    "Working directory",
+			Status:  "ok",
+			Message: workingDir,
+		})
+	} else {
+		report.WorkingDir = "unknown"
+		report.Checks = append(report.Checks, PreflightCheck{
+			Name:    "Working directory",
+			Status:  "error",
+			Message: fmt.Sprintf("Could not determine current working directory: %v", err),
+		})
+	}
+
+	addCheck := func(name string, err error, successMessage string) {
+		check := PreflightCheck{Name: name}
+		if err != nil {
+			check.Status = "error"
+			check.Message = err.Error()
+			report.OverallStatus = "error"
+		} else {
+			check.Status = "ok"
+			check.Message = successMessage
+		}
+		report.Checks = append(report.Checks, check)
+	}
+
+	if configInfo, err := os.Stat(report.ConfigPath); err != nil {
+		addCheck("Config path", err, "")
+	} else {
+		configType := "file"
+		if configInfo.IsDir() {
+			configType = "directory"
+		}
+		addCheck("Config path", nil, fmt.Sprintf("Using %s %s", configType, report.ConfigPath))
+	}
+
+	envChecks := collectConfigEnvChecks(report.ConfigPath)
+	report.Checks = append(report.Checks, envChecks...)
+	for _, check := range envChecks {
+		if check.Status == "error" {
+			report.OverallStatus = "error"
+		} else if check.Status == "warning" && report.OverallStatus == "ok" {
+			report.OverallStatus = "warning"
+		}
+	}
+
+	config, configErr := loadConfig(report.ConfigPath)
+	addCheck("Config load", configErr, "Configuration loaded successfully.")
+
+	if configErr == nil {
+		validationErr := validateConfig(config)
+		if validationErr != nil {
+			addCheck("Config validation", validationErr, "")
+		} else {
+			addCheck("Config validation", nil, "Config validation passed.")
+		}
+
+		identityChecks := collectIdentityChecks(config)
+		report.Checks = append(report.Checks, identityChecks...)
+		for _, check := range identityChecks {
+			if check.Status == "error" {
+				report.OverallStatus = "error"
+			} else if check.Status == "warning" && report.OverallStatus == "ok" {
+				report.OverallStatus = "warning"
+			}
+		}
+	}
+
+	if configInfoErr := ensureWritableFile("results.json"); configInfoErr != nil {
+		addCheck("Results file", configInfoErr, "")
+	} else {
+		addCheck("Results file", nil, "results.json is writable.")
+	}
+
+	if logErr := ensureWritableFile("remote_check.log"); logErr != nil {
+		addCheck("Remote check log", logErr, "")
+	} else {
+		addCheck("Remote check log", nil, "remote_check.log is writable.")
+	}
+
+	if historyErr := ensureHistoryWritable(); historyErr != nil {
+		addCheck("History storage", historyErr, "")
+	} else {
+		addCheck("History storage", nil, "History directory and database path are writable.")
+	}
+
+	if executablePath, err := os.Executable(); err != nil {
+		addCheck("Server binary", err, "")
+	} else if _, err := os.Stat(executablePath); err != nil {
+		addCheck("Server binary", err, "")
+	} else {
+		addCheck("Server binary", nil, fmt.Sprintf("Binary available at %s.", executablePath))
+	}
+
+	return report
+}
+
+func collectConfigEnvChecks(configPath string) []PreflightCheck {
+	var files []string
+
+	info, err := os.Stat(configPath)
+	if err != nil {
+		return nil
+	}
+
+	if info.IsDir() {
+		_ = filepath.WalkDir(configPath, func(path string, d fs.DirEntry, walkErr error) error {
+			if walkErr != nil || d.IsDir() {
+				return nil
+			}
+			switch strings.ToLower(filepath.Ext(path)) {
+			case ".yaml", ".yml":
+				files = append(files, path)
+			}
+			return nil
+		})
+	} else {
+		files = append(files, configPath)
+	}
+
+	re := regexp.MustCompile(`\$\{env\.([a-zA-Z_][a-zA-Z0-9_]*)\}`)
+	seen := make(map[string]bool)
+	var checks []PreflightCheck
+
+	for _, path := range files {
+		content, readErr := os.ReadFile(filepath.Clean(path))
+		if readErr != nil {
+			continue
+		}
+
+		matches := re.FindAllStringSubmatch(string(content), -1)
+		for _, match := range matches {
+			if len(match) != 2 {
+				continue
+			}
+			envName := match[1]
+			if seen[envName] {
+				continue
+			}
+			seen[envName] = true
+
+			value := os.Getenv(envName)
+			if value == "" {
+				checks = append(checks, PreflightCheck{
+					Name:    fmt.Sprintf("Env %s", envName),
+					Status:  "error",
+					Message: fmt.Sprintf("Environment variable %s is not set.", envName),
+				})
+				continue
+			}
+
+			checks = append(checks, PreflightCheck{
+				Name:    fmt.Sprintf("Env %s", envName),
+				Status:  "ok",
+				Message: fmt.Sprintf("Environment variable %s is available.", envName),
+			})
+		}
+	}
+
+	sort.Slice(checks, func(i, j int) bool {
+		return checks[i].Name < checks[j].Name
+	})
+
+	return checks
+}
+
+func collectIdentityChecks(config Config) []PreflightCheck {
+	var identityNames []string
+	for name := range config.Identities {
+		identityNames = append(identityNames, name)
+	}
+	sort.Strings(identityNames)
+
+	var checks []PreflightCheck
+	for _, name := range identityNames {
+		identity := config.Identities[name]
+		if strings.TrimSpace(identity.Key) != "" {
+			keyPath := filepath.Clean(identity.Key)
+			keyContents, err := os.ReadFile(keyPath)
+			if err != nil {
+				checks = append(checks, PreflightCheck{
+					Name:    fmt.Sprintf("Identity %s", name),
+					Status:  "error",
+					Message: fmt.Sprintf("Could not read private key %s: %v", keyPath, err),
+				})
+				continue
+			}
+
+			if strings.TrimSpace(identity.Passphrase) != "" {
+				if _, err := ssh.ParsePrivateKeyWithPassphrase(keyContents, []byte(identity.Passphrase)); err != nil {
+					checks = append(checks, PreflightCheck{
+						Name:    fmt.Sprintf("Identity %s", name),
+						Status:  "error",
+						Message: fmt.Sprintf("Private key %s could not be unlocked with the configured passphrase: %v", keyPath, err),
+					})
+					continue
+				}
+
+				checks = append(checks, PreflightCheck{
+					Name:    fmt.Sprintf("Identity %s", name),
+					Status:  "ok",
+					Message: fmt.Sprintf("Private key %s is readable and unlocks for user %s.", keyPath, identity.User),
+				})
+				continue
+			}
+
+			if _, err := ssh.ParsePrivateKey(keyContents); err != nil {
+				checks = append(checks, PreflightCheck{
+					Name:    fmt.Sprintf("Identity %s", name),
+					Status:  "error",
+					Message: fmt.Sprintf("Private key %s could not be parsed without a passphrase: %v", keyPath, err),
+				})
+				continue
+			}
+
+			checks = append(checks, PreflightCheck{
+				Name:    fmt.Sprintf("Identity %s", name),
+				Status:  "ok",
+				Message: fmt.Sprintf("Private key %s is readable for user %s.", keyPath, identity.User),
+			})
+			continue
+		}
+
+		if strings.TrimSpace(identity.Password) != "" {
+			checks = append(checks, PreflightCheck{
+				Name:    fmt.Sprintf("Identity %s", name),
+				Status:  "ok",
+				Message: fmt.Sprintf("Password authentication is configured for user %s.", identity.User),
+			})
+			continue
+		}
+
+		checks = append(checks, PreflightCheck{
+			Name:    fmt.Sprintf("Identity %s", name),
+			Status:  "warning",
+			Message: "No private key or password is configured.",
+		})
+	}
+
+	return checks
+}
+
+func ensureWritableFile(path string) error {
+	file, err := os.OpenFile(filepath.Clean(path), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	return file.Close()
+}
+
+func ensureHistoryWritable() error {
+	if err := os.MkdirAll("history", 0755); err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(filepath.Clean("history/checkycheck_history.db"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	return file.Close()
+}

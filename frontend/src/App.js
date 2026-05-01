@@ -12,6 +12,7 @@ import RunTestsPage from './pages/RunTestsPage';  // Importeer de nieuwe compone
 import CheckTemplatesPage from './pages/CheckTemplatesPage';  // Importeer de nieuwe component
 import HostsPage from './pages/HostsPage';
 import HistoryPage from './pages/HistoryPage';
+import DiagnosticsPage from './pages/DiagnosticsPage';
 import ThemeToggle from './components/ThemeToggle';
 
 const formatErrorType = (errorType) => {
@@ -188,6 +189,7 @@ const AppShell = () => {
             />
             <Route path="/hosts" element={<HostsPage results={results.results} checks={visibleChecks} status={results.status} />} />
             <Route path="/history" element={<HistoryPage />} />
+            <Route path="/diagnostics" element={<DiagnosticsPage />} />
             <Route path="/help" element={<HelpPage />} />
             <Route path="/templates" element={<CheckTemplatesPage />} />
             <Route path="/run-tests" element={<RunTestsPage onTestsComplete={handleTestsComplete} />} />

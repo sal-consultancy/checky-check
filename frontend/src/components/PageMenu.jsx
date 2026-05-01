@@ -41,6 +41,14 @@ const PageMenu = () => {
         </li>
         <li>
           <Link
+            to="/diagnostics"
+            className={location.pathname === "/diagnostics" ? "is-active" : ""}
+          >
+            Diagnostics
+          </Link>
+        </li>
+        <li>
+          <Link
             to="/help"
             className={location.pathname === "/help" ? "is-active" : ""}
           >

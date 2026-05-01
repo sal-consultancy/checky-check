@@ -182,3 +182,16 @@ type CheckHistoryDetail struct {
 	Metrics   []HistorySparklineMetric `json:"metrics"`
 	Events    []HistoryEventRecord     `json:"events"`
 }
+
+type PreflightCheck struct {
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
+type PreflightReport struct {
+	OverallStatus string           `json:"overall_status"`
+	ConfigPath    string           `json:"config_path"`
+	WorkingDir    string           `json:"working_dir"`
+	Checks        []PreflightCheck `json:"checks"`
+}
