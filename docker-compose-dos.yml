@@ -7,8 +7,16 @@ services:
     working_dir: /app
     command: >
       sh -ec "
-      test -f /app/go.mod &&
-      go build -o /tmp/checkycheck . &&
+      echo '[checkycheck] container starting';
+      echo '[checkycheck] working directory:' $(pwd);
+      if [ ! -f /app/go.mod ]; then
+        echo '[checkycheck] /app/go.mod not found - check the bind mount';
+        ls -la /app || true;
+        exit 1;
+      fi;
+      echo '[checkycheck] found go.mod, building binary';
+      go build -o /tmp/checkycheck .;
+      echo '[checkycheck] build complete, starting server';
       exec /tmp/checkycheck -mode=serve -config=/app/config-sal -port=8070
       "
     environment:
@@ -19,7 +27,7 @@ services:
     volumes:
       - .:/app
     networks:
-      - checkycheck-internal
+      - traefik_web
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.12.0
@@ -54,11 +62,8 @@ services:
       - traefik.http.routers.checkycheck-dos.service=checkycheck-dos
       - traefik.http.services.checkycheck-dos.loadbalancer.server.port=4180
     networks:
-      - checkycheck-internal
       - traefik_web
 
 networks:
-  checkycheck-internal:
-    name: checkycheck-dos-internal
   traefik_web:
     external: true
