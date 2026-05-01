@@ -12,6 +12,7 @@ Configuration is YAML-only.
 
 - `-config config.yaml` loads one YAML file
 - `-config config/` loads and merges all `.yaml` and `.yml` files in that directory tree
+- `CHECKYCHECK_CONFIG_PATH` can provide the default config path for binary or container deployments
 - duplicate names across merged files are rejected
 
 Typical top-level sections:

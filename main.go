@@ -31,7 +31,12 @@ func init() {
 }
 
 func main() {
-	configPath := flag.String("config", "config.yaml", "Path to the config file or config directory")
+	defaultConfigPath := os.Getenv("CHECKYCHECK_CONFIG_PATH")
+	if defaultConfigPath == "" {
+		defaultConfigPath = "config.yaml"
+	}
+
+	configPath := flag.String("config", defaultConfigPath, "Path to the config file or config directory")
 	mode := flag.String("mode", "check", "Mode to run: check, report, or serve")
 	port := flag.Int("port", 8070, "Port to run the server on")
 	showVersion := flag.Bool("version", false, "Show application version") // -version flag

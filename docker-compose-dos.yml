@@ -9,7 +9,7 @@ services:
     container_name: checkycheck_dos
     environment:
       TZ: Europe/Amsterdam
-      CHECKYCHECK_CONFIG_DIR: /config
+      CHECKYCHECK_CONFIG_PATH: /config
       cc_passphrase: ${cc_passphrase}
     expose:
       - "8070"

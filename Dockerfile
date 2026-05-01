@@ -29,4 +29,4 @@ COPY --from=go-build /out/checkycheck /usr/local/bin/checkycheck
 
 EXPOSE 8070
 
-CMD ["sh", "-c", "exec checkycheck -mode=serve -config=${CHECKYCHECK_CONFIG_DIR:-/config} -port=${CHECKYCHECK_PORT:-8070}"]
+CMD ["sh", "-c", "exec checkycheck -mode=serve -config=${CHECKYCHECK_CONFIG_PATH:-/config} -port=${CHECKYCHECK_PORT:-8070}"]
