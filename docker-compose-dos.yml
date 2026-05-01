@@ -9,12 +9,14 @@ services:
     container_name: checkycheck_dos
     environment:
       TZ: Europe/Amsterdam
+      CHECKYCHECK_CONFIG_DIR: /config
       cc_passphrase: ${cc_passphrase}
     expose:
       - "8070"
     restart: unless-stopped
     volumes:
       - checkycheck-dos-data:/data
+      - ${CHECKYCHECK_CONFIG_SOURCE:-/opt/checkycheck/config}:/config:ro
       - ${CHECKYCHECK_SECRETS_DIR:-/opt/checkycheck/secrets}:/run/secrets/checkycheck:ro
     networks:
       - traefik_web

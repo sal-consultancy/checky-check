@@ -1,5 +1,0 @@
-identities:
-  cc1:
-    user: checkycheck
-    key: /run/secrets/checkycheck/id_rsa
-    passphrase: ${env.cc_passphrase}

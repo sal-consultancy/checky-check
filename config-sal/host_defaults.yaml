@@ -1,6 +1,0 @@
-host_defaults:
-  identity: cc1
-  host_vars:
-    timezone: Europe/Amsterdam
-  check_groups:
-    - os_general_cg

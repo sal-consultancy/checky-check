@@ -187,13 +187,13 @@ URL checks store extra runtime details in `results.json`, including:
 Generate or refresh `results.json`:
 
 ```sh
-checkycheck.exe -config=config-sal -mode=check
+checkycheck.exe -config=/path/to/config -mode=check
 ```
 
 Serve the UI:
 
 ```sh
-checkycheck.exe -port=8071 -config=config-sal -mode=serve
+checkycheck.exe -port=8071 -config=/path/to/config -mode=serve
 ```
 
 ## History
@@ -207,6 +207,14 @@ Retention defaults:
 
 - runs: 90 days
 - events: 30 days
+
+## Deployment Note
+
+For production deployments, keep customer configuration outside this repository.
+
+- mount the active config directory into the runtime environment
+- mount SSH keys and other secrets separately
+- pass sensitive values such as passphrases via environment variables or a secret manager
 
 ## Development
 

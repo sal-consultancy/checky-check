@@ -1,4 +1,0 @@
-host_templates:
-  sal_docker_ht:
-    # check_groups:
-    #   - docker_cg

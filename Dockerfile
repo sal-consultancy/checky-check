@@ -26,8 +26,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=go-build /out/checkycheck /usr/local/bin/checkycheck
-COPY config-sal /config-sal
 
 EXPOSE 8070
 
-CMD ["checkycheck", "-mode=serve", "-config=/config-sal", "-port=8070"]
+CMD ["sh", "-c", "exec checkycheck -mode=serve -config=${CHECKYCHECK_CONFIG_DIR:-/config} -port=${CHECKYCHECK_PORT:-8070}"]
