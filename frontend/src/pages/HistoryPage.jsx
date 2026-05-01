@@ -14,12 +14,10 @@ const formatEventType = (eventType) => {
 const renderErrorSummary = (errorSummary) => {
   const entries = Object.entries(errorSummary || {}).filter(([, count]) => count > 0);
   if (entries.length === 0) {
-    return 'No technical issues';
+    return null;
   }
 
-  return entries
-    .map(([type, count]) => `${formatErrorType(type)}: ${count}`)
-    .join(', ');
+  return entries.map(([type, count]) => ({ type, label: formatErrorType(type), count }));
 };
 
 const formatRunLabel = (generatedAt) => {
@@ -51,6 +49,12 @@ const formatEventHost = (host) => {
   if (!host) return '-';
   if (host === 'url_checks') return 'URL Checks';
   return host;
+};
+
+const formatDuration = (durationMs) => {
+  if (!Number.isFinite(durationMs)) return '-';
+  if (durationMs >= 1000) return `${(durationMs / 1000).toFixed(1)} s`;
+  return `${durationMs} ms`;
 };
 
 const HistoryPage = () => {
@@ -282,7 +286,7 @@ const HistoryPage = () => {
           <div className="notification is-warning is-light">No run history is available yet.</div>
         ) : (
           <div className="history-table-wrapper">
-            <table className="table is-striped is-bordered is-size-7 is-fullwidth">
+            <table className="table history-data-table is-fullwidth">
               <thead>
                 <tr>
                   <th>Run</th>
@@ -302,22 +306,35 @@ const HistoryPage = () => {
               <tbody>
                 {runs.map((run) => {
                   const isSelected = run.id === selectedRunId;
+                  const issueSummary = renderErrorSummary(run.error_summary);
                   return (
-                    <tr key={run.id} className={isSelected ? 'history-run-row is-selected' : 'history-run-row'}>
-                      <td>#{run.id}</td>
-                      <td>{run.generated_at}</td>
-                      <td>{formatRunType(run.run_type)}</td>
+                    <tr key={run.id} className={isSelected ? 'history-run-row is-current' : 'history-run-row'}>
+                      <td><span className="history-run-id">#{run.id}</span></td>
+                      <td><span className="history-time">{run.generated_at}</span></td>
+                      <td><span className="history-pill">{formatRunType(run.run_type)}</span></td>
                       <td>{formatRunTarget(run)}</td>
-                      <td>{run.status}</td>
-                      <td>{run.host_count}</td>
-                      <td>{run.check_count}</td>
-                      <td>{run.passed_count}</td>
-                      <td>{run.failed_count}</td>
-                      <td>{run.duration_ms} ms</td>
-                      <td>{renderErrorSummary(run.error_summary)}</td>
+                      <td><span className={`history-status-pill is-${run.status}`}>{run.status}</span></td>
+                      <td><span className="history-metric">{run.host_count}</span></td>
+                      <td><span className="history-metric">{run.check_count}</span></td>
+                      <td><span className="history-metric is-passed">{run.passed_count}</span></td>
+                      <td><span className="history-metric is-failed">{run.failed_count}</span></td>
+                      <td><span className="history-time">{formatDuration(run.duration_ms)}</span></td>
+                      <td>
+                        {issueSummary ? (
+                          <div className="history-issue-tags">
+                            {issueSummary.map((issue) => (
+                              <span key={issue.type} className="tag is-warning is-light">
+                                {issue.label}: {issue.count}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="history-muted">No technical issues</span>
+                        )}
+                      </td>
                       <td>
                         <button
-                          className={isSelected ? 'button is-small is-link' : 'button is-small is-light'}
+                          className={isSelected ? 'button history-view-button is-current' : 'button history-view-button'}
                           type="button"
                           onClick={() => setSelectedRunId(isSelected ? null : run.id)}
                         >
@@ -354,14 +371,17 @@ const HistoryPage = () => {
         {eventsLoading ? (
           <p>Loading events...</p>
         ) : events.length === 0 ? (
-          <div className="notification is-warning is-light">
-            {selectedRun
-              ? 'No history events were recorded for this run.'
-              : 'No recent history events were recorded.'}
+          <div className="history-empty-state">
+            <h4 className="write">No events recorded</h4>
+            <p>
+              {selectedRun
+                ? 'This run did not introduce failures, recoveries, config errors, or changed failure details.'
+                : 'There are no recent failures, recoveries, or config issues to show.'}
+            </p>
           </div>
         ) : (
           <div className="history-table-wrapper">
-            <table className="table is-striped is-bordered is-size-7 is-fullwidth">
+            <table className="table history-data-table is-fullwidth">
               <thead>
                 <tr>
                   <th>Run</th>
@@ -377,12 +397,12 @@ const HistoryPage = () => {
               <tbody>
                 {events.map((event) => (
                   <tr key={event.id}>
-                    <td>#{event.run_id}</td>
-                    <td>{event.event_time}</td>
-                    <td>{formatEventType(event.event_type)}</td>
+                    <td><span className="history-run-id">#{event.run_id}</span></td>
+                    <td><span className="history-time">{event.event_time}</span></td>
+                    <td><span className="history-pill">{formatEventType(event.event_type)}</span></td>
                     <td>{formatEventHost(event.host)}</td>
                     <td>{event.check_name || '-'}</td>
-                    <td>{event.status || '-'}</td>
+                    <td>{event.status ? <span className={`history-status-pill is-${event.status}`}>{event.status}</span> : '-'}</td>
                     <td>{event.value || '-'}</td>
                     <td>
                       {event.error_type ? (

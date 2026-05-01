@@ -28,8 +28,8 @@ const HelpPage = () => {
         </p>
         <h3 className="title is-4 mt-5">Refreshing data</h3>
         <p>
-          You can refresh the data manually using the <Link to="/run-tests">run tests</Link> link. The tests will immediately start running.
-          When the tests are done, the results, the output is shown on the page.
+          Use the Run Checks action on the <Link to="/">summary</Link> page to refresh the data manually.
+          The run page shows command output while the checks are running and reloads the latest results when the run finishes.
         </p>
         <h3 className="title is-4 mt-5">Check voorbeelden</h3>
         <p>

@@ -79,6 +79,33 @@ checks:
     fail_when: "!="
     fail_value: OK
 
+  check_failed_ssh_auth_24h:
+    title: Failed SSH Auth Attempts Last 24h
+    description: Tel het aantal mislukte of invalid SSH-authenticatiepogingen in de afgelopen 24 uur
+    command: |
+      journal_cmd="journalctl"
+      if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
+        journal_cmd="sudo -n journalctl"
+      fi
+
+      journal_output="$($journal_cmd -q -u sshd --since "24 hours ago" --no-pager 2>&1)"
+      journal_status=$?
+
+      if [ "$journal_status" -ne 0 ] || printf '%s\n' "$journal_output" | grep -qi 'No journal files were opened\|not seeing messages'; then
+        echo "$(( ${security.failed_ssh_auth_24h_max} + 1 ))"
+      else
+        printf '%s\n' "$journal_output" \
+          | grep -Eic 'Failed password|Invalid user|authentication failure|Connection closed by authenticating user|Unable to negotiate' || true
+      fi
+    fail_when: ">"
+    fail_value: ${security.failed_ssh_auth_24h_max}
+    graph:
+      title: Failed SSH auth attempts per host in the last 24 hours
+      type: bar
+    vars:
+      security:
+        failed_ssh_auth_24h_max: "100"
+
   check_required_mounts:
     title: Required Mounts
     description: Controleer of alle verwachte mountpoints aanwezig zijn

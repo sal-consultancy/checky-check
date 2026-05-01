@@ -196,6 +196,7 @@ const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, er
           <p className="summary-status-copy">{statusCopy}</p>
         </div>
         <div className="summary-status-actions">
+          <Link className="button is-small is-dark" to="/run-tests">Run Checks</Link>
           <Link className="button is-small is-light" to="/report">Open Report</Link>
           <Link className="button is-small is-light" to="/hosts">Open Hosts</Link>
           <Link className="button is-small is-light" to="/history">Run History</Link>
@@ -243,44 +244,50 @@ const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, er
               <p className="summary-section-copy">
                 {failedURLChecks > 0
                   ? `${failedURLChecks} failing, ${urlCheckCount - failedURLChecks} passing`
-                  : `All ${urlCheckCount} URL checks are currently passing. Showing ${urlPreviewNames.length} examples.`}
+                  : `All ${urlCheckCount} URL checks are currently passing.`}
               </p>
             </div>
             <span className="tag is-light">
               {failedURLChecks > 0 ? `${failedURLChecks} failing` : 'All passing'}
             </span>
           </div>
-          <div className="summary-url-list">
-            {urlPreviewNames.map((checkName) => {
-              const check = urlChecks[checkName];
-              const result = urlResults?.[checkName];
-              const isFailed = result?.status === 'failed';
-              const resolvedURL = resolveTemplateValue(check.url, result?.vars);
-              const summaryBits = [
-                result?.value || 'n/a',
-                Number.isFinite(result?.latency_ms) ? `${result.latency_ms} ms` : null,
-              ].filter(Boolean);
+          {failedURLChecks > 0 ? (
+            <div className="summary-url-list">
+              {urlPreviewNames.map((checkName) => {
+                const check = urlChecks[checkName];
+                const result = urlResults?.[checkName];
+                const isFailed = result?.status === 'failed';
+                const resolvedURL = resolveTemplateValue(check.url, result?.vars);
+                const summaryBits = [
+                  result?.value || 'n/a',
+                  Number.isFinite(result?.latency_ms) ? `${result.latency_ms} ms` : null,
+                ].filter(Boolean);
 
-              return (
-                <Link key={checkName} className={`summary-url-row${isFailed ? ' is-failed' : ''}`} to={`/report#url-${checkName}`}>
-                  <div>
-                    <strong>{check.title}</strong>
-                    <div className="summary-url-meta">
-                      <span>{resolvedURL}</span>
-                      <span>{summaryBits.join(' · ')}</span>
-                      {result?.final_url && result.final_url !== resolvedURL && (
-                        <span>Final: {result.final_url}</span>
-                      )}
+                return (
+                  <Link key={checkName} className={`summary-url-row${isFailed ? ' is-failed' : ''}`} to={`/report#url-${checkName}`}>
+                    <div>
+                      <strong>{check.title}</strong>
+                      <div className="summary-url-meta">
+                        <span>{resolvedURL}</span>
+                        <span>{summaryBits.join(' · ')}</span>
+                        {result?.final_url && result.final_url !== resolvedURL && (
+                          <span>Final: {result.final_url}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <span className={`tag ${isFailed ? 'is-danger' : 'is-success'} is-light`}>
-                    {result?.status || 'unknown'}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-          {urlCheckCount > urlPreviewNames.length && (
+                    <span className={`tag ${isFailed ? 'is-danger' : 'is-success'} is-light`}>
+                      {result?.status || 'unknown'}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="summary-success-card">
+              <p>No URL check details need attention right now.</p>
+            </div>
+          )}
+          {(failedURLChecks === 0 || urlCheckCount > urlPreviewNames.length) && (
             <div className="summary-url-footer">
               <Link className="button is-small is-light" to="/report#url-checks">View all URL checks</Link>
             </div>
@@ -288,16 +295,32 @@ const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, er
         </div>
       )}
 
-      <div className="summary-main-grid">
+      {checksWithFailures.length > 0 ? (
+        <section className="summary-issues-card">
+          <div className="summary-metric-label">Current Issues</div>
+          <h3 className="summary-section-title">Most affected checks right now</h3>
+          <div className="summary-issue-list">
+            {checksWithFailures.slice(0, 6).map((checkName) => (
+              <Link key={checkName} className="summary-issue-row" to={`/report#${checkName}`}>
+                <div>
+                  <strong>{checks[checkName]?.title || checkName}</strong>
+                  <div className="summary-issue-meta">
+                    {summary[checkName].failed} failed, {summary[checkName].passed} passed
+                  </div>
+                </div>
+                <span className="tag is-danger is-light">{summary[checkName].failed}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : (
         <section className="summary-chart-card">
           <div className="summary-chart-header">
             <div>
               <div className="summary-metric-label">Results Per Check</div>
-              <h3 className="summary-section-title">Per-check outcome with failures highlighted</h3>
+              <h3 className="summary-section-title">Per-check outcome</h3>
             </div>
-            <span className="tag is-light">
-              {checksWithFailures.length > 0 ? `${checksWithFailures.length} checks with failures` : 'No failing checks'}
-            </span>
+            <span className="tag is-light">No failing checks</span>
           </div>
           {hasChecks ? (
             <div className="summary-chart-canvas">
@@ -309,31 +332,7 @@ const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, er
             </div>
           )}
         </section>
-
-        <aside className="summary-issues-card">
-          <div className="summary-metric-label">Current Issues</div>
-          <h3 className="summary-section-title">Most affected checks right now</h3>
-          {checksWithFailures.length > 0 ? (
-            <div className="summary-issue-list">
-              {checksWithFailures.slice(0, 6).map((checkName) => (
-                <Link key={checkName} className="summary-issue-row" to={`/report#${checkName}`}>
-                  <div>
-                    <strong>{checks[checkName]?.title || checkName}</strong>
-                    <div className="summary-issue-meta">
-                      {summary[checkName].failed} failed, {summary[checkName].passed} passed
-                    </div>
-                  </div>
-                  <span className="tag is-danger is-light">{summary[checkName].failed}</span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="summary-success-card">
-              <p>Nothing to triage right now. All active host checks returned a passing result.</p>
-            </div>
-          )}
-        </aside>
-      </div>
+      )}
     </div>
   );
 };

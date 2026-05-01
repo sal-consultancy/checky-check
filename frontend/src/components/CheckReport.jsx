@@ -150,8 +150,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
   const hasPassedURLs = passedURLDetails.length > 0;
   const hasFailedURLs = failedURLDetails.length > 0;
   const urlGraphData = [
-    { value: passedURLDetails.length, failed: 0 },
-    { value: failedURLDetails.length, failed: failedURLDetails.length },
+    { value: passedURLDetails.length, failed: 0, status: 'passed' },
+    { value: failedURLDetails.length, failed: failedURLDetails.length, status: 'failed' },
   ];
 
   const toggleAllFailedHosts = () => {
@@ -537,7 +537,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                 <p className="report-check-copy">{check.description}</p>
 
                 {showDetails[checkName] && (
-                  <div className="check_details has-text-left has-background-light py-3 px-3 my-3">
+                  <div className="check_details has-text-left py-3 px-3 my-3">
                     <h5 className="is-size-6 write">Description</h5>
                     <p className="is-size-6 has-text-weight-light">{check.description}</p>
                     <h5 className="is-size-6 write mt-3">

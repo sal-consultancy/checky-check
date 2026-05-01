@@ -24,7 +24,7 @@ url_checks:
     description: Controleer of docudoc.nl succesvol reageert met HTTP 200 of 302
     url: ${url}
     fail_when: "!="
-    fail_value: ["1200", "1302"]
+    fail_value: ["200", "302"]
     timeout: 15s
     vars:
       url: https://docudoc.nl

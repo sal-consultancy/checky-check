@@ -8,6 +8,7 @@ check_groups:
       - check_failed_systemd_units
       - check_reboot_required
       - check_time_sync
+      - check_failed_ssh_auth_24h
       - check_required_mounts
       - linux_version
       - linux_kernel_version
