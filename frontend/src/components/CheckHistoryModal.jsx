@@ -18,6 +18,8 @@ const StatusTrendChart = ({ points }) => {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
+  const oldestPoint = points[0];
+  const latestPoint = points[points.length - 1];
 
   const polylinePoints = points.map((point, index) => {
     const x = paddingX + (index * (width - paddingX * 2)) / Math.max(points.length - 1, 1);
@@ -52,14 +54,23 @@ const StatusTrendChart = ({ points }) => {
             key={dot.key}
             cx={dot.x}
             cy={dot.y}
-            r="3.5"
+            r={dot.key === `${latestPoint.run_id}-${latestPoint.generated_at}-${points.length - 1}` ? '5' : '3.5'}
             fill={dot.status === 'failed' ? '#a44b4b' : '#4d8650'}
+            stroke={dot.key === `${latestPoint.run_id}-${latestPoint.generated_at}-${points.length - 1}` ? '#1f3b8f' : 'none'}
+            strokeWidth={dot.key === `${latestPoint.run_id}-${latestPoint.generated_at}-${points.length - 1}` ? '1.5' : '0'}
           />
         ))}
       </svg>
       <div className="history-modal-chart-range">
-        <span>Min {min}</span>
-        <span>Max {max}</span>
+        <span className="history-modal-chart-meta">
+          <strong>Oldest</strong> {oldestPoint.generated_at} · {oldestPoint.value}
+        </span>
+        <span className="history-modal-chart-meta">
+          <strong>Range</strong> {min} - {max}
+        </span>
+        <span className="history-modal-chart-meta">
+          <strong>Latest</strong> {latestPoint.generated_at} · {latestPoint.value}
+        </span>
       </div>
     </div>
   );
