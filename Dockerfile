@@ -10,13 +10,15 @@ RUN npm run build
 FROM golang:1.25-bookworm AS go-build
 WORKDIR /src
 
+ARG APP_VERSION=development
+
 COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
 COPY --from=frontend-build /src/frontend/build ./frontend/build
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/checkycheck .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-X main.AppVersion=${APP_VERSION}" -o /out/checkycheck .
 
 FROM debian:bookworm-slim
 WORKDIR /data
