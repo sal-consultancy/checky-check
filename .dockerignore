@@ -1,0 +1,15 @@
+.git
+.github
+frontend/node_modules
+frontend/build
+history
+smoke_config_dir_1
+smoke_dup_dir_1
+wrappers
+secrets
+remote_check.log
+results.json
+sal-sample.yaml
+config-sample
+config-sample.json
+config-sample.yaml
