@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ChartComponent from './ChartComponent';
 import { FaChevronDown, FaChevronUp, FaPlus, FaMinus, FaTimes } from 'react-icons/fa';
+import CheckHistoryModal from './CheckHistoryModal';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
@@ -14,6 +15,41 @@ const resolveTemplateValue = (template, vars) => {
   ));
 };
 
+const Sparkline = ({ points }) => {
+  if (!points || points.length < 2) {
+    return <span className="host-sparkline-empty">--</span>;
+  }
+
+  const width = 92;
+  const height = 24;
+  const padding = 2;
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const polylinePoints = points.map((point, index) => {
+    const x = padding + (index * (width - padding * 2)) / Math.max(points.length - 1, 1);
+    const y = height - padding - ((point.value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const isRising = values[values.length - 1] > values[0];
+
+  return (
+    <svg className="host-sparkline" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <polyline
+        fill="none"
+        stroke={isRising ? '#c0392b' : '#4d8650'}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={polylinePoints}
+      />
+    </svg>
+  );
+};
+
 const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) => {
   const [expandedSections, setExpandedSections] = useState({});
   const [showDetails, setShowDetails] = useState({});
@@ -24,6 +60,15 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
   const [rerunLoading, setRerunLoading] = useState({});
   const [rerunFeedback, setRerunFeedback] = useState({});
   const [resultOverrides, setResultOverrides] = useState({ results: {}, urlResults: {} });
+  const [sparklineData, setSparklineData] = useState({});
+  const [detailTarget, setDetailTarget] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/history/sparklines?limit=14')
+      .then((response) => response.json())
+      .then((data) => setSparklineData(data || {}))
+      .catch(() => setSparklineData({}));
+  }, []);
 
   if (status === 'config_error') {
     return (
@@ -238,6 +283,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
             <th>Latency</th>
             <th>Issue</th>
             <th>Timestamp</th>
+            <th className="no-print">History</th>
             <th className="no-print">Action</th>
           </tr>
         </thead>
@@ -276,6 +322,22 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
               <td>{detail.timestamp}</td>
               <td className="no-print">
                 <button
+                  className="button is-small is-light"
+                  onClick={() => setDetailTarget({
+                    host: 'url_checks',
+                    scopeLabel: 'Central URL check',
+                    kind: 'url_check',
+                    checkName: detail.checkName,
+                    checkTitle: detail.title,
+                    status: detail.status,
+                    value: detail.value,
+                  })}
+                >
+                  View history
+                </button>
+              </td>
+              <td className="no-print">
+                <button
                   className={`button is-small is-light ${rerunLoading[`url:${detail.checkName}`] ? 'is-loading' : ''}`}
                   onClick={() => rerunTarget(
                     { kind: 'url_check', check_name: detail.checkName },
@@ -295,7 +357,10 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
     </>
   );
 
-  const renderHostTable = (checkName, checkTitle, details, heading, isFailedTable) => (
+  const renderHostTable = (checkName, checkTitle, details, heading, isFailedTable) => {
+    const sparklineEnabled = Boolean(checks[checkName]?.sparkline?.enabled);
+
+    return (
     <>
       <h5 className="is-size-5 write mt-3 has-text-left">{heading}</h5>
       <table className="table is-striped is-bordered is-size-7 mt-2">
@@ -304,8 +369,10 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
             <th>Host</th>
             <th>Status</th>
             <th>Value</th>
+            {sparklineEnabled && <th>Trend</th>}
             <th>Issue</th>
             <th>Timestamp</th>
+            <th className="no-print">History</th>
             <th className="no-print">Action</th>
           </tr>
         </thead>
@@ -315,6 +382,11 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
               <td>{detail.host}</td>
               <td>{detail.status}</td>
               <td>{detail.value}</td>
+              {sparklineEnabled && (
+                <td>
+                  <Sparkline points={sparklineData?.[detail.host]?.[checkName] || []} />
+                </td>
+              )}
               <td>
                 {isFailedTable && detail.error_type ? (
                   <>
@@ -324,6 +396,20 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                 ) : '--'}
               </td>
               <td>{detail.timestamp}</td>
+              <td className="no-print">
+                <button
+                  className="button is-small is-light"
+                  onClick={() => setDetailTarget({
+                    host: detail.host,
+                    checkName,
+                    checkTitle,
+                    status: detail.status,
+                    value: detail.value,
+                  })}
+                >
+                  View history
+                </button>
+              </td>
               <td className="no-print">
                 <button
                   className={`button is-small is-light ${rerunLoading[`check:${checkName}:host:${detail.host}`] ? 'is-loading' : ''}`}
@@ -343,7 +429,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
         </tbody>
       </table>
     </>
-  );
+    );
+  };
 
   return (
     <div className="check-report">
@@ -594,6 +681,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
         );
       })}
       </div>
+      <CheckHistoryModal detailTarget={detailTarget} onClose={() => setDetailTarget(null)} />
     </div>
   );
 };

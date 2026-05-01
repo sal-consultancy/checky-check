@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -113,15 +114,25 @@ func serve(port int, configPath string) {
 
 	// Endpoint voor het uitvoeren van tests
 	http.HandleFunc("/run-tests", func(w http.ResponseWriter, r *http.Request) {
-		cmd := getCommand(configPath)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Printf("Error running tests: %v", err)
-			http.Error(w, fmt.Sprintf("Error running tests: %v\nOutput: %s", err, output), http.StatusInternalServerError)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(output)
+
+		cmd := getCommand(configPath)
+		err := streamCommandOutput(w, cmd)
+		if err != nil {
+			log.Printf("Error running tests: %v", err)
+			fmt.Fprintf(w, "\n[run failed] %v\n__CHECKY_CHECK_RUN_STATUS__:failed\n", err)
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+			return
+		}
+		fmt.Fprint(w, "\n[run completed]\n__CHECKY_CHECK_RUN_STATUS__:success\n")
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
 	})
 
 	http.HandleFunc("/api/run-check", func(w http.ResponseWriter, r *http.Request) {
@@ -199,10 +210,105 @@ func serve(port int, configPath string) {
 		json.NewEncoder(w).Encode(events)
 	})
 
+	http.HandleFunc("/api/history/sparklines", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		limit := 14
+		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+			if parsedLimit, err := strconv.Atoi(rawLimit); err == nil && parsedLimit > 0 && parsedLimit <= 60 {
+				limit = parsedLimit
+			}
+		}
+
+		metrics, err := readHostSparklineMetrics(limit)
+		if err != nil {
+			log.Printf("Error reading sparkline metrics: %v", err)
+			http.Error(w, "Could not read sparkline metrics", http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(metrics)
+	})
+
+	http.HandleFunc("/api/history/check-detail", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		host := strings.TrimSpace(r.URL.Query().Get("host"))
+		checkName := strings.TrimSpace(r.URL.Query().Get("check_name"))
+		if host == "" || checkName == "" {
+			http.Error(w, "host and check_name are required", http.StatusBadRequest)
+			return
+		}
+
+		limit := 20
+		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+			if parsedLimit, err := strconv.Atoi(rawLimit); err == nil && parsedLimit > 0 && parsedLimit <= 100 {
+				limit = parsedLimit
+			}
+		}
+
+		detail, err := readCheckHistoryDetail(host, checkName, limit)
+		if err != nil {
+			log.Printf("Error reading check history detail: %v", err)
+			http.Error(w, "Could not read check history detail", http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(detail)
+	})
+
 	// Start de server
 	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Starting server on %s\n", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
+}
+
+func streamCommandOutput(w http.ResponseWriter, cmd *exec.Cmd) error {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return fmt.Errorf("streaming is not supported by this response writer")
+	}
+
+	pipeReader, pipeWriter := io.Pipe()
+	cmd.Stdout = pipeWriter
+	cmd.Stderr = pipeWriter
+
+	if err := cmd.Start(); err != nil {
+		pipeWriter.Close()
+		pipeReader.Close()
+		return err
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	waitCh := make(chan error, 1)
+	go func() {
+		waitCh <- cmd.Wait()
+		pipeWriter.Close()
+	}()
+
+	buffer := make([]byte, 4096)
+	for {
+		readCount, readErr := pipeReader.Read(buffer)
+		if readCount > 0 {
+			if _, err := w.Write(buffer[:readCount]); err != nil {
+				return err
+			}
+			flusher.Flush()
+		}
+
+		if readErr != nil {
+			if readErr == io.EOF {
+				break
+			}
+			return readErr
+		}
+	}
+
+	return <-waitCh
 }

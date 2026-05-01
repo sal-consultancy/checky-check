@@ -149,6 +149,8 @@ const HistoryPage = () => {
     () => runs.find((run) => run.id === selectedRunId) || null,
     [runs, selectedRunId]
   );
+  const visibleRuns = useMemo(() => runs.slice(0, 7), [runs]);
+  const visibleEvents = useMemo(() => events.slice(0, 7), [events]);
 
   const selectedRunLabel = selectedRun ? `#${selectedRun.id}` : 'Recent Events';
 
@@ -282,7 +284,7 @@ const HistoryPage = () => {
             </button>
           ) : null}
         </div>
-        {runs.length === 0 ? (
+        {visibleRuns.length === 0 ? (
           <div className="notification is-warning is-light">No run history is available yet.</div>
         ) : (
           <div className="history-table-wrapper">
@@ -304,7 +306,7 @@ const HistoryPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {runs.map((run) => {
+                {visibleRuns.map((run) => {
                   const isSelected = run.id === selectedRunId;
                   const issueSummary = renderErrorSummary(run.error_summary);
                   return (
@@ -370,7 +372,7 @@ const HistoryPage = () => {
         ) : null}
         {eventsLoading ? (
           <p>Loading events...</p>
-        ) : events.length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <div className="history-empty-state">
             <h4 className="write">No events recorded</h4>
             <p>
@@ -395,7 +397,7 @@ const HistoryPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {events.map((event) => (
+                {visibleEvents.map((event) => (
                   <tr key={event.id}>
                     <td><span className="history-run-id">#{event.run_id}</span></td>
                     <td><span className="history-time">{event.event_time}</span></td>

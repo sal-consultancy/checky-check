@@ -1,15 +1,60 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronUp, FaTimes } from 'react-icons/fa';
+import CheckHistoryModal from '../components/CheckHistoryModal';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
   return errorType.replaceAll('_', ' ');
 };
 
+const Sparkline = ({ points }) => {
+  if (!points || points.length < 2) {
+    return <span className="host-sparkline-empty">--</span>;
+  }
+
+  const width = 92;
+  const height = 24;
+  const padding = 2;
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  const polylinePoints = points.map((point, index) => {
+    const x = padding + (index * (width - padding * 2)) / Math.max(points.length - 1, 1);
+    const y = height - padding - ((point.value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const isRising = values[values.length - 1] > values[0];
+
+  return (
+    <svg className="host-sparkline" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <polyline
+        fill="none"
+        stroke={isRising ? '#c0392b' : '#4d8650'}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={polylinePoints}
+      />
+    </svg>
+  );
+};
+
 const HostsPage = ({ results, checks, status }) => {
   const [expandedHosts, setExpandedHosts] = useState({});
   const [showOnlyFailedHosts, setShowOnlyFailedHosts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sparklineData, setSparklineData] = useState({});
+  const [detailTarget, setDetailTarget] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/history/sparklines?limit=14')
+      .then((response) => response.ok ? response.json() : {})
+      .then((data) => setSparklineData(data || {}))
+      .catch(() => setSparklineData({}));
+  }, []);
 
   const hosts = useMemo(() => {
     return Object.keys(results).map((host) => {
@@ -18,6 +63,8 @@ const HostsPage = ({ results, checks, status }) => {
         checkName,
         title: checks[checkName]?.title || checkName,
         description: checks[checkName]?.description || '',
+        sparkline: checks[checkName]?.sparkline || {},
+        sparklinePoints: sparklineData?.[host]?.[checkName] || [],
         ...hostResults[checkName],
       }));
 
@@ -32,7 +79,7 @@ const HostsPage = ({ results, checks, status }) => {
         totalCount: checkRows.length,
       };
     });
-  }, [results, checks]);
+  }, [results, checks, sparklineData]);
 
   if (status === 'config_error') {
     return (
@@ -119,8 +166,10 @@ const HostsPage = ({ results, checks, status }) => {
                       <th>Check</th>
                       <th>Status</th>
                       <th>Value</th>
+                      <th>Trend</th>
                       <th>Issue</th>
                       <th>Timestamp</th>
+                      <th className="no-print">History</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -133,14 +182,31 @@ const HostsPage = ({ results, checks, status }) => {
                         <td>{row.status}</td>
                         <td>{row.value}</td>
                         <td>
+                          {row.sparkline?.enabled ? <Sparkline points={row.sparklinePoints} /> : '--'}
+                        </td>
+                        <td>
                           {row.error_type ? (
                             <>
                               <span className="tag is-warning is-light">{formatErrorType(row.error_type)}</span>
                               {row.error_message && <div className="error-detail-text">{row.error_message}</div>}
                             </>
-                          ) : '—'}
+                          ) : '--'}
                         </td>
                         <td>{row.timestamp}</td>
+                        <td className="no-print">
+                          <button
+                            className="button is-small is-light"
+                            onClick={() => setDetailTarget({
+                              host: host.host,
+                              checkName: row.checkName,
+                              checkTitle: row.title,
+                              status: row.status,
+                              value: row.value,
+                            })}
+                          >
+                            View history
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -150,6 +216,8 @@ const HostsPage = ({ results, checks, status }) => {
           </div>
         ))}
       </div>
+
+      <CheckHistoryModal detailTarget={detailTarget} onClose={() => setDetailTarget(null)} />
     </div>
   );
 };

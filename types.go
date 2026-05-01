@@ -46,19 +46,20 @@ type CheckGroup struct {
 }
 
 type Check struct {
-	Title            string      `json:"title" yaml:"title"`
-	Command          string      `json:"command,omitempty" yaml:"command,omitempty"`
-	Service          string      `json:"service,omitempty" yaml:"service,omitempty"`
-	URL              string      `json:"url,omitempty" yaml:"url,omitempty"`
-	FollowRedirects  bool        `json:"follow_redirects,omitempty" yaml:"follow_redirects,omitempty"`
-	ExpectedContains string      `json:"expected_contains,omitempty" yaml:"expected_contains,omitempty"`
-	FailWhen         string      `json:"fail_when" yaml:"fail_when"`
-	FailValue        interface{} `json:"fail_value" yaml:"fail_value"` // Can be a string or a list of strings
-	Description      string      `json:"description,omitempty" yaml:"description,omitempty"`
-	Graph            GraphConfig `json:"graph,omitempty" yaml:"graph,omitempty"`
-	Timeout          string      `json:"timeout,omitempty" yaml:"timeout,omitempty"` // Store as string
-	Local            bool        `json:"local,omitempty" yaml:"local,omitempty"`
-	Vars             VarMap      `json:"vars,omitempty" yaml:"vars,omitempty"`
+	Title            string          `json:"title" yaml:"title"`
+	Command          string          `json:"command,omitempty" yaml:"command,omitempty"`
+	Service          string          `json:"service,omitempty" yaml:"service,omitempty"`
+	URL              string          `json:"url,omitempty" yaml:"url,omitempty"`
+	FollowRedirects  bool            `json:"follow_redirects,omitempty" yaml:"follow_redirects,omitempty"`
+	ExpectedContains string          `json:"expected_contains,omitempty" yaml:"expected_contains,omitempty"`
+	FailWhen         string          `json:"fail_when" yaml:"fail_when"`
+	FailValue        interface{}     `json:"fail_value" yaml:"fail_value"` // Can be a string or a list of strings
+	Description      string          `json:"description,omitempty" yaml:"description,omitempty"`
+	Graph            GraphConfig     `json:"graph,omitempty" yaml:"graph,omitempty"`
+	Sparkline        SparklineConfig `json:"sparkline,omitempty" yaml:"sparkline,omitempty"`
+	Timeout          string          `json:"timeout,omitempty" yaml:"timeout,omitempty"` // Store as string
+	Local            bool            `json:"local,omitempty" yaml:"local,omitempty"`
+	Vars             VarMap          `json:"vars,omitempty" yaml:"vars,omitempty"`
 }
 
 type Host struct {
@@ -83,6 +84,11 @@ type GraphConfig struct {
 	Show   bool                `json:"show" yaml:"show"`
 	Legend bool                `json:"legend" yaml:"legend"`
 	Colors map[string][]string `json:"colors" yaml:"colors"`
+}
+
+type SparklineConfig struct {
+	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Points  int  `json:"points,omitempty" yaml:"points,omitempty"`
 }
 
 type CheckResult struct {
@@ -159,4 +165,20 @@ type HistoryEventRecord struct {
 	Value        string `json:"value"`
 	ErrorType    string `json:"error_type,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`
+}
+
+type HistorySparklineMetric struct {
+	RunID       int64   `json:"run_id"`
+	GeneratedAt string  `json:"generated_at"`
+	Host        string  `json:"host"`
+	CheckName   string  `json:"check_name"`
+	Value       float64 `json:"value"`
+	Status      string  `json:"status"`
+}
+
+type CheckHistoryDetail struct {
+	Host      string                   `json:"host"`
+	CheckName string                   `json:"check_name"`
+	Metrics   []HistorySparklineMetric `json:"metrics"`
+	Events    []HistoryEventRecord     `json:"events"`
 }

@@ -588,19 +588,24 @@ func executeHostCheck(config Config, host string, hostConfig Host, hostGroup Hos
 func executeURLCheck(checkName string, check Check, logger *log.Logger) CheckResult {
 	resolvedVars, err := resolveVariables(check.Vars)
 	if err != nil {
-		return variableResolutionFailureResult("", checkName, check.Vars, err)
+		result := variableResolutionFailureResult("", checkName, check.Vars, err)
+		fmt.Printf("%s - URL Check: %s - Status: %s - Value: %s\n", result.Timestamp, checkName, result.Status, strings.TrimSpace(result.Value))
+		return result
 	}
 
 	targetURL := replaceVariables(check.URL, resolvedVars)
 	timeout := parseTimeout(check.Timeout)
 	resolvedFailValue := resolveFailValueValue(check.FailValue, check.Vars, resolvedVars)
 	logger.Printf("Running standalone URL check %s: %s", checkName, targetURL)
+	fmt.Printf("Running URL check %s: %s\n", checkName, targetURL)
 
 	executionResult, err := runURLCheck(targetURL, timeout, check.FollowRedirects, check.ExpectedContains)
 	if err != nil {
 		logger.Printf("Failed standalone url check %s: %v\n", checkName, err)
 		result, errorType, errorMessage := errorDetailsFrom(err, fmt.Sprintf("%d", executionResult.StatusCode))
-		return appendURLExecutionFailureResult(checkName, result, errorType, errorMessage, resolvedVars, targetURL, executionResult)
+		checkResult := appendURLExecutionFailureResult(checkName, result, errorType, errorMessage, resolvedVars, targetURL, executionResult)
+		fmt.Printf("%s - URL Check: %s - Status: %s - Value: %s\n", checkResult.Timestamp, checkName, checkResult.Status, strings.TrimSpace(checkResult.Value))
+		return checkResult
 	}
 
 	result := fmt.Sprintf("%d", executionResult.StatusCode)
@@ -609,7 +614,9 @@ func executeURLCheck(checkName string, check Check, logger *log.Logger) CheckRes
 		status = "failed"
 	}
 
-	return buildURLCheckResult(checkName, status, result, resolvedVars, targetURL, executionResult)
+	checkResult := buildURLCheckResult(checkName, status, result, resolvedVars, targetURL, executionResult)
+	fmt.Printf("%s - URL Check: %s - Status: %s - Value: %s\n", checkResult.Timestamp, checkName, checkResult.Status, strings.TrimSpace(checkResult.Value))
+	return checkResult
 }
 
 func findHostTargetsForCheck(config Config, checkName string, hostFilter string) []HostCheckTarget {

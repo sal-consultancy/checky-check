@@ -41,6 +41,9 @@ checks:
     graph:
       title: Root filesystem usage by 10% range
       type: bar_grouped_by_10_percentile
+    sparkline:
+      enabled: true
+      points: 14
 
   check_failed_systemd_units:
     title: Failed Systemd Units
@@ -52,14 +55,9 @@ checks:
   check_reboot_required:
     title: Reboot Required
     description: Controleer of de host een reboot nodig heeft na updates
-    command: |
-      if [ -f /var/run/reboot-required ] || [ -f /run/reboot-required ]; then
-        echo YES
-      else
-        echo NO
-      fi
-    fail_when: "="
-    fail_value: YES
+    command: needs-restarting -r 1>/dev/null ; echo $?
+    fail_when: ">"
+    fail_value: 0
 
   check_time_sync:
     title: Time Synchronization
@@ -83,15 +81,10 @@ checks:
     title: Failed SSH Auth Attempts Last 24h
     description: Tel het aantal mislukte of invalid SSH-authenticatiepogingen in de afgelopen 24 uur
     command: |
-      journal_cmd="journalctl"
-      if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
-        journal_cmd="sudo -n journalctl"
-      fi
-
-      journal_output="$($journal_cmd -q -u sshd --since "24 hours ago" --no-pager 2>&1)"
+      journal_output="$(sudo -n journalctl -q -u sshd --since "24 hours ago" --no-pager 2>&1)"
       journal_status=$?
 
-      if [ "$journal_status" -ne 0 ] || printf '%s\n' "$journal_output" | grep -qi 'No journal files were opened\|not seeing messages'; then
+      if [ "$journal_status" -ne 0 ] || printf '%s\n' "$journal_output" | grep -qi 'No journal files were opened\|not seeing messages\|sudo:'; then
         echo "$(( ${security.failed_ssh_auth_24h_max} + 1 ))"
       else
         printf '%s\n' "$journal_output" \
@@ -102,6 +95,9 @@ checks:
     graph:
       title: Failed SSH auth attempts per host in the last 24 hours
       type: bar
+    sparkline:
+      enabled: true
+      points: 14
     vars:
       security:
         failed_ssh_auth_24h_max: "100"
@@ -134,3 +130,78 @@ checks:
     service: firewalld
     fail_when: "="
     fail_value: "0"
+
+  check_firewalld_allowed_ports:
+    title: Firewalld Allowed Ports
+    description: Controleer of firewalld alleen de opgegeven externe poorten toelaat in de gekozen zone
+    command: |
+      firewall_output="$(sudo -n firewall-cmd --zone="${firewall.zone}" --list-ports 2>&1)"
+      firewall_status=$?
+
+      if [ "$firewall_status" -ne 0 ] || printf '%s\n' "$firewall_output" | grep -qi 'sudo:\|not running\|not found'; then
+        echo NOK:FIREWALL_UNAVAILABLE
+      else
+        actual_ports="$(printf '%s\n' "$firewall_output" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+        expected_ports="$(printf '%s\n' "${firewall.allowed_ports}" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+
+        if [ "$actual_ports" = "$expected_ports" ]; then
+          echo OK
+        elif [ -z "$actual_ports" ]; then
+          echo NOK:NONE
+        else
+          echo "NOK:$actual_ports"
+        fi
+      fi
+    fail_when: "!="
+    fail_value: OK
+    graph:
+      title: Firewalld allowed ports per host
+      type: bar
+    vars:
+      firewall:
+        zone: public
+        allowed_ports: "22/tcp 443/tcp"
+
+  check_fail2ban:
+    title: Fail2ban
+    description: Controleer of fail2ban actief is
+    service: fail2ban
+    fail_when: "!="
+    fail_value: active
+
+  check_fail2ban_banned_ips:
+    title: Fail2ban Banned IPs
+    description: Tel het totaal aantal gebande IP-adressen over alle actieve fail2ban jails
+    command: |
+      jail_list_output="$(sudo -n fail2ban-client status 2>&1)"
+      jail_list_status=$?
+
+      if [ "$jail_list_status" -ne 0 ] || printf '%s\n' "$jail_list_output" | grep -qi 'sudo:\|not found\|not running'; then
+        echo "$(( ${security.fail2ban_banned_ip_max} + 1 ))"
+      else
+        jail_names="$(printf '%s\n' "$jail_list_output" | awk -F':' '/Jail list:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); gsub(/, */, " ", $2); print $2}')"
+        total_banned=0
+
+        if [ -n "$jail_names" ]; then
+          for jail_name in $jail_names; do
+            jail_status_output="$(sudo -n fail2ban-client status "$jail_name" 2>/dev/null)"
+            banned_count="$(printf '%s\n' "$jail_status_output" | awk -F':' '/Currently banned:/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}')"
+            if [ -n "$banned_count" ]; then
+              total_banned=$(( total_banned + banned_count ))
+            fi
+          done
+        fi
+
+        echo "$total_banned"
+      fi
+    fail_when: ">"
+    fail_value: ${security.fail2ban_banned_ip_max}
+    graph:
+      title: Totaal aantal gebande IP-adressen per host
+      type: bar
+    sparkline:
+      enabled: true
+      points: 14
+    vars:
+      security:
+        fail2ban_banned_ip_max: "25"

@@ -435,6 +435,18 @@ body {
   color: var(--app-success-text);
 }
 
+.summary-success-card-compact {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.summary-success-card-compact p {
+  margin: 0;
+}
+
 .host-summary-grid {
   display: grid;
   gap: 1rem;
@@ -576,6 +588,16 @@ body {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+.host-sparkline {
+  width: 92px;
+  height: 24px;
+  display: block;
+}
+
+.host-sparkline-empty {
+  color: var(--app-text-muted);
 }
 
 .error-detail-text {
@@ -845,10 +867,98 @@ code {
   text-align: left;
 }
 
+.history-detail-modal {
+  width: min(92vw, 1080px);
+}
+
+.history-detail-modal .modal-card-head,
+.history-detail-modal .modal-card-body {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+.history-detail-modal .modal-card-head {
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.history-detail-modal .modal-card-head > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.history-detail-modal .modal-card-title {
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.history-detail-modal .modal-card-head .delete {
+  flex: 0 0 auto;
+  margin-left: auto;
+  margin-top: 0.2rem;
+}
+
+.history-modal-subtitle {
+  margin-top: 0.25rem;
+  color: var(--app-text-muted);
+}
+
+.history-modal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.history-modal-section + .history-modal-section {
+  margin-top: 1.5rem;
+}
+
+.history-modal-chart-shell {
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-muted);
+}
+
+.history-modal-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.history-modal-chart-range {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.4rem;
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+}
+
+.history-modal-empty {
+  margin-top: 0.75rem;
+  color: var(--app-text-muted);
+}
+
 footer.footer {
   margin-top: auto;
   background: var(--app-surface);
   color: var(--app-text-muted);
+  padding: 1rem 1.5rem 1.2rem;
+}
+
+footer.footer .content {
+  font-size: 0.88rem;
+}
+
+footer.footer .content p {
+  margin-bottom: 0.35rem;
+}
+
+footer.footer .content p:last-child {
+  margin-bottom: 0;
 }
 
 .theme-toggle {

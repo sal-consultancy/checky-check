@@ -933,6 +933,7 @@ func writeHistoryWithMetadata(resultData ResultFile, previousResultData ResultFi
 
 	hostCount, checkCount, passedCount, failedCount := summarizeResultCounts(resultData)
 	events := buildHistoryEvents(resultData, previousResultData, metadata)
+	sparklineMetrics := buildSparklineMetrics(resultData, metadata)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -1006,6 +1007,28 @@ func writeHistoryWithMetadata(resultData ResultFile, previousResultData ResultFi
 		}
 	}
 
+	for _, metric := range sparklineMetrics {
+		if _, err := tx.Exec(`
+			INSERT INTO run_metrics (
+				run_id,
+				generated_at,
+				host,
+				check_name,
+				numeric_value,
+				status
+			) VALUES (?, ?, ?, ?, ?, ?)
+		`,
+			runID,
+			resultData.GeneratedAt,
+			metric.Host,
+			metric.CheckName,
+			metric.Value,
+			metric.Status,
+		); err != nil {
+			return HistoryRun{}, fmt.Errorf("unable to insert history metric: %w", err)
+		}
+	}
+
 	if err := pruneHistory(tx); err != nil {
 		return HistoryRun{}, err
 	}
@@ -1063,6 +1086,16 @@ func initHistorySchema(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_runs_generated_at ON runs(generated_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_event_time ON events(event_time)`,
 		`CREATE INDEX IF NOT EXISTS idx_events_host_check ON events(host, check_name)`,
+		`CREATE TABLE IF NOT EXISTS run_metrics (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			run_id INTEGER NOT NULL,
+			generated_at TEXT NOT NULL,
+			host TEXT NOT NULL,
+			check_name TEXT NOT NULL,
+			numeric_value REAL NOT NULL,
+			status TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_run_metrics_host_check_time ON run_metrics(host, check_name, generated_at)`,
 	}
 
 	for _, statement := range statements {
@@ -1202,6 +1235,57 @@ func summarizeResultCounts(resultData ResultFile) (int, int, int, int) {
 	return hostCount, checkCount, passedCount, failedCount
 }
 
+func buildSparklineMetrics(resultData ResultFile, metadata HistoryRunMetadata) []HistorySparklineMetric {
+	if metadata.RunType != "full" {
+		return nil
+	}
+
+	var metrics []HistorySparklineMetric
+	for host, hostResults := range resultData.Results {
+		for checkName, result := range hostResults {
+			check, exists := resultData.Checks[checkName]
+			if !exists || !check.Sparkline.Enabled {
+				continue
+			}
+
+			numericValue, err := strconv.ParseFloat(strings.TrimSpace(result.Value), 64)
+			if err != nil {
+				continue
+			}
+
+			metrics = append(metrics, HistorySparklineMetric{
+				GeneratedAt: resultData.GeneratedAt,
+				Host:        host,
+				CheckName:   checkName,
+				Value:       numericValue,
+				Status:      result.Status,
+			})
+		}
+	}
+
+	for checkName, result := range resultData.URLResults {
+		check, exists := resultData.URLChecks[checkName]
+		if !exists || !check.Sparkline.Enabled {
+			continue
+		}
+
+		numericValue, err := strconv.ParseFloat(strings.TrimSpace(result.Value), 64)
+		if err != nil {
+			continue
+		}
+
+		metrics = append(metrics, HistorySparklineMetric{
+			GeneratedAt: resultData.GeneratedAt,
+			Host:        "url_checks",
+			CheckName:   checkName,
+			Value:       numericValue,
+			Status:      result.Status,
+		})
+	}
+
+	return metrics
+}
+
 func buildHistoryEvents(current ResultFile, previous ResultFile, metadata HistoryRunMetadata) []HistoryEvent {
 	if current.Status == "config_error" {
 		events := make([]HistoryEvent, 0, len(current.Errors))
@@ -1308,6 +1392,7 @@ func appendHistoryEvents(events []HistoryEvent, host string, currentResults map[
 func pruneHistory(tx *sql.Tx) error {
 	statements := []string{
 		`DELETE FROM events WHERE event_time < datetime('now', '-30 day')`,
+		`DELETE FROM run_metrics WHERE generated_at < datetime('now', '-90 day')`,
 		`DELETE FROM runs WHERE generated_at < datetime('now', '-90 day')`,
 	}
 
@@ -1436,4 +1521,159 @@ func readRecentEvents(limit int, runID *int64) ([]HistoryEventRecord, error) {
 	}
 
 	return events, nil
+}
+
+func readHostSparklineMetrics(limit int) (map[string]map[string][]HistorySparklineMetric, error) {
+	db, err := openHistoryDB()
+	if err != nil {
+		return nil, fmt.Errorf("unable to open history database: %w", err)
+	}
+	if db == nil {
+		return map[string]map[string][]HistorySparklineMetric{}, nil
+	}
+	defer db.Close()
+
+	rows, err := db.Query(`
+		WITH ranked_metrics AS (
+			SELECT
+				run_id,
+				generated_at,
+				host,
+				check_name,
+				numeric_value,
+				status,
+				ROW_NUMBER() OVER (
+					PARTITION BY host, check_name
+					ORDER BY generated_at DESC, run_id DESC
+				) AS rn
+			FROM run_metrics
+		)
+		SELECT run_id, generated_at, host, check_name, numeric_value, status
+		FROM ranked_metrics
+		WHERE rn <= ?
+		ORDER BY host, check_name, generated_at ASC, run_id ASC
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("unable to query sparkline metrics: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[string]map[string][]HistorySparklineMetric)
+	for rows.Next() {
+		var metric HistorySparklineMetric
+		if err := rows.Scan(
+			&metric.RunID,
+			&metric.GeneratedAt,
+			&metric.Host,
+			&metric.CheckName,
+			&metric.Value,
+			&metric.Status,
+		); err != nil {
+			return nil, fmt.Errorf("unable to scan sparkline metric: %w", err)
+		}
+
+		if _, exists := result[metric.Host]; !exists {
+			result[metric.Host] = make(map[string][]HistorySparklineMetric)
+		}
+		result[metric.Host][metric.CheckName] = append(result[metric.Host][metric.CheckName], metric)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating sparkline metrics: %w", err)
+	}
+
+	return result, nil
+}
+
+func readCheckHistoryDetail(host string, checkName string, limit int) (CheckHistoryDetail, error) {
+	db, err := openHistoryDB()
+	if err != nil {
+		return CheckHistoryDetail{}, fmt.Errorf("unable to open history database: %w", err)
+	}
+	if db == nil {
+		return CheckHistoryDetail{
+			Host:      host,
+			CheckName: checkName,
+			Metrics:   []HistorySparklineMetric{},
+			Events:    []HistoryEventRecord{},
+		}, nil
+	}
+	defer db.Close()
+
+	metricRows, err := db.Query(`
+		SELECT run_id, generated_at, host, check_name, numeric_value, status
+		FROM run_metrics
+		WHERE host = ? AND check_name = ?
+		ORDER BY generated_at DESC, run_id DESC
+		LIMIT ?
+	`, host, checkName, limit)
+	if err != nil {
+		return CheckHistoryDetail{}, fmt.Errorf("unable to query check history metrics: %w", err)
+	}
+	defer metricRows.Close()
+
+	var metrics []HistorySparklineMetric
+	for metricRows.Next() {
+		var metric HistorySparklineMetric
+		if err := metricRows.Scan(
+			&metric.RunID,
+			&metric.GeneratedAt,
+			&metric.Host,
+			&metric.CheckName,
+			&metric.Value,
+			&metric.Status,
+		); err != nil {
+			return CheckHistoryDetail{}, fmt.Errorf("unable to scan check history metric: %w", err)
+		}
+		metrics = append(metrics, metric)
+	}
+	if err := metricRows.Err(); err != nil {
+		return CheckHistoryDetail{}, fmt.Errorf("error iterating check history metrics: %w", err)
+	}
+
+	for left, right := 0, len(metrics)-1; left < right; left, right = left+1, right-1 {
+		metrics[left], metrics[right] = metrics[right], metrics[left]
+	}
+
+	eventRows, err := db.Query(`
+		SELECT id, run_id, event_time, event_type, host, check_name, status, value, error_type, error_message
+		FROM events
+		WHERE host = ? AND check_name = ?
+		ORDER BY id DESC
+		LIMIT ?
+	`, host, checkName, limit)
+	if err != nil {
+		return CheckHistoryDetail{}, fmt.Errorf("unable to query check history events: %w", err)
+	}
+	defer eventRows.Close()
+
+	var events []HistoryEventRecord
+	for eventRows.Next() {
+		var event HistoryEventRecord
+		if err := eventRows.Scan(
+			&event.ID,
+			&event.RunID,
+			&event.EventTime,
+			&event.EventType,
+			&event.Host,
+			&event.CheckName,
+			&event.Status,
+			&event.Value,
+			&event.ErrorType,
+			&event.ErrorMessage,
+		); err != nil {
+			return CheckHistoryDetail{}, fmt.Errorf("unable to scan check history event: %w", err)
+		}
+		events = append(events, event)
+	}
+	if err := eventRows.Err(); err != nil {
+		return CheckHistoryDetail{}, fmt.Errorf("error iterating check history events: %w", err)
+	}
+
+	return CheckHistoryDetail{
+		Host:      host,
+		CheckName: checkName,
+		Metrics:   metrics,
+		Events:    events,
+	}, nil
 }

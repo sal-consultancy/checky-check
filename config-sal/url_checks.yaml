@@ -6,6 +6,9 @@ url_checks:
     fail_when: "!="
     fail_value: ["200", "302"]
     timeout: 15s
+    sparkline:
+      enabled: true
+      points: 14
     vars:
       url: https://laddio.nl
 
@@ -16,6 +19,9 @@ url_checks:
     fail_when: "!="
     fail_value: ["200", "302"]
     timeout: 15s
+    sparkline:
+      enabled: true
+      points: 14
     vars:
       url: https://tennisportaal.nl
 
@@ -26,5 +32,8 @@ url_checks:
     fail_when: "!="
     fail_value: ["200", "302"]
     timeout: 15s
+    sparkline:
+      enabled: true
+      points: 14
     vars:
       url: https://docudoc.nl

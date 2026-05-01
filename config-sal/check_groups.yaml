@@ -4,6 +4,9 @@ check_groups:
     checks:
       - check_uptime
       - check_firewalld
+      - check_firewalld_allowed_ports
+      - check_fail2ban
+      - check_fail2ban_banned_ips
       - check_disk_root_usage
       - check_failed_systemd_units
       - check_reboot_required

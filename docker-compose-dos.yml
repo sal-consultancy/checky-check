@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  checkycheck:
+    image: golang:1.25-bookworm
+    container_name: checkycheck_dos
+    working_dir: /app
+    command: >
+      sh -c "
+      go build -o /tmp/checkycheck main.go remote_check.go types.go helpers.go &&
+      /tmp/checkycheck -mode=serve -config=/app/config-sal -port=8070
+      "
+    environment:
+      TZ: Europe/Amsterdam
+    expose:
+      - "8070"
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    networks:
+      - checkycheck-internal
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.12.0
+    container_name: checkycheck_dos_oauth2_proxy
+    restart: unless-stopped
+    depends_on:
+      - checkycheck
+    environment:
+      OAUTH2_PROXY_PROVIDER: oidc
+      OAUTH2_PROXY_OIDC_ISSUER_URL: ${OAUTH2_PROXY_OIDC_ISSUER_URL}
+      OAUTH2_PROXY_CLIENT_ID: ${OAUTH2_PROXY_CLIENT_ID}
+      OAUTH2_PROXY_CLIENT_SECRET: ${OAUTH2_PROXY_CLIENT_SECRET}
+      OAUTH2_PROXY_COOKIE_SECRET: ${OAUTH2_PROXY_COOKIE_SECRET}
+      OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
+      OAUTH2_PROXY_UPSTREAMS: http://checkycheck:8070/
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_SET_XAUTHREQUEST: "true"
+      OAUTH2_PROXY_PASS_AUTHORIZATION_HEADER: "true"
+      OAUTH2_PROXY_PASS_USER_HEADERS: "true"
+      OAUTH2_PROXY_SCOPE: "openid profile email"
+      OAUTH2_PROXY_WHITELIST_DOMAINS: ${OAUTH2_PROXY_WHITELIST_DOMAINS}
+      OAUTH2_PROXY_REDIRECT_URL: ${OAUTH2_PROXY_REDIRECT_URL}
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.checkycheck-dos.rule=Host(`${CHECKYCHECK_HOST}`)
+      - traefik.http.routers.checkycheck-dos.entrypoints=websecure
+      - traefik.http.routers.checkycheck-dos.tls=true
+      - traefik.http.routers.checkycheck-dos.service=checkycheck-dos
+      - traefik.http.services.checkycheck-dos.loadbalancer.server.port=4180
+    networks:
+      - checkycheck-internal
+      - traefik-public
+
+networks:
+  checkycheck-internal:
+    name: checkycheck-dos-internal
+  traefik-public:
+    external: true

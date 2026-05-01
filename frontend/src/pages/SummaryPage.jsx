@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Chart } from 'chart.js/auto';
 
@@ -12,6 +12,7 @@ const resolveTemplateValue = (template, vars) => {
 const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, errorSummary }) => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
+  const [showPassingURLExamples, setShowPassingURLExamples] = useState(false);
   const hasChecks = Object.keys(checks).length > 0;
   const hasURLChecks = Object.keys(urlChecks || {}).length > 0;
   const hasAnyChecks = hasChecks || hasURLChecks;
@@ -283,9 +284,49 @@ const SummaryPage = ({ results, checks, urlResults, urlChecks, status, stats, er
               })}
             </div>
           ) : (
-            <div className="summary-success-card">
-              <p>No URL check details need attention right now.</p>
-            </div>
+            <>
+              <div className="summary-success-card summary-success-card-compact">
+                <p>All {urlCheckCount} URL checks are healthy.</p>
+                <button
+                  type="button"
+                  className="button is-small is-light"
+                  onClick={() => setShowPassingURLExamples((current) => !current)}
+                >
+                  {showPassingURLExamples ? 'Hide examples' : 'Show examples'}
+                </button>
+              </div>
+              {showPassingURLExamples && (
+                <div className="summary-url-list mt-3">
+                  {urlPreviewNames.map((checkName) => {
+                    const check = urlChecks[checkName];
+                    const result = urlResults?.[checkName];
+                    const resolvedURL = resolveTemplateValue(check.url, result?.vars);
+                    const summaryBits = [
+                      result?.value || 'n/a',
+                      Number.isFinite(result?.latency_ms) ? `${result.latency_ms} ms` : null,
+                    ].filter(Boolean);
+
+                    return (
+                      <Link key={checkName} className="summary-url-row" to={`/report#url-${checkName}`}>
+                        <div>
+                          <strong>{check.title}</strong>
+                          <div className="summary-url-meta">
+                            <span>{resolvedURL}</span>
+                            <span>{summaryBits.join(' · ')}</span>
+                            {result?.final_url && result.final_url !== resolvedURL && (
+                              <span>Final: {result.final_url}</span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="tag is-success is-light">
+                          {result?.status || 'unknown'}
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
           {(failedURLChecks === 0 || urlCheckCount > urlPreviewNames.length) && (
             <div className="summary-url-footer">
