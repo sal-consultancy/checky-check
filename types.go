@@ -11,6 +11,18 @@ type Config struct {
 	URLChecks     map[string]Check        `json:"url_checks,omitempty" yaml:"url_checks,omitempty"`
 	HostGroups    map[string]HostGroup    `json:"host_groups" yaml:"host_groups"`
 	Report        Report                  `json:"report" yaml:"report"`
+	Auth          AuthConfig              `json:"auth,omitempty" yaml:"auth,omitempty"`
+}
+
+type AuthConfig struct {
+	Mode           string   `json:"mode,omitempty" yaml:"mode,omitempty"`
+	UserHeader     string   `json:"user_header,omitempty" yaml:"user_header,omitempty"`
+	EmailHeader    string   `json:"email_header,omitempty" yaml:"email_header,omitempty"`
+	GroupsHeader   string   `json:"groups_header,omitempty" yaml:"groups_header,omitempty"`
+	LogoutPath     string   `json:"logout_path,omitempty" yaml:"logout_path,omitempty"`
+	ViewerGroups   []string `json:"viewer_groups,omitempty" yaml:"viewer_groups,omitempty"`
+	OperatorGroups []string `json:"operator_groups,omitempty" yaml:"operator_groups,omitempty"`
+	AdminGroups    []string `json:"admin_groups,omitempty" yaml:"admin_groups,omitempty"`
 }
 
 type Identity struct {
@@ -194,4 +206,21 @@ type PreflightReport struct {
 	ConfigPath    string           `json:"config_path"`
 	WorkingDir    string           `json:"working_dir"`
 	Checks        []PreflightCheck `json:"checks"`
+}
+
+type AuthPermissions struct {
+	View    bool `json:"view"`
+	Operate bool `json:"operate"`
+	Admin   bool `json:"admin"`
+}
+
+type AuthSession struct {
+	Mode          string          `json:"mode"`
+	Authenticated bool            `json:"authenticated"`
+	Username      string          `json:"username,omitempty"`
+	Email         string          `json:"email,omitempty"`
+	Groups        []string        `json:"groups,omitempty"`
+	Role          string          `json:"role"`
+	LogoutURL     string          `json:"logout_url,omitempty"`
+	Permissions   AuthPermissions `json:"permissions"`
 }

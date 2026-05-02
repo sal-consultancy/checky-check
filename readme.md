@@ -231,3 +231,26 @@ Build the frontend:
 cd frontend
 npm run build
 ```
+
+### Local auth proxy
+
+To test `auth.mode: proxy` locally without Keycloak or oauth2-proxy, run the small header-injecting reverse proxy:
+
+```sh
+go run ./cmd/local-auth-proxy -upstream http://127.0.0.1:8070 -listen :8080
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8080/__auth__
+```
+
+The chooser page lets you switch between:
+
+- `unauthenticated`
+- `viewer`
+- `operator`
+- `admin`
+
+The proxy stores the selected role in a local cookie and injects the corresponding auth headers on proxied requests.

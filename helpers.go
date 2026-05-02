@@ -461,6 +461,7 @@ func mergeConfig(dst *Config, src Config, source string) []string {
 	mergeErrors = append(mergeErrors, mergeHostGroups(dst.HostGroups, src.HostGroups, source)...)
 	mergeErrors = append(mergeErrors, mergeHostDefaults(&dst.HostDefaults, src.HostDefaults, source)...)
 	mergeErrors = append(mergeErrors, mergeReport(&dst.Report, src.Report, source)...)
+	mergeErrors = append(mergeErrors, mergeAuthConfig(&dst.Auth, src.Auth, source)...)
 
 	return mergeErrors
 }
@@ -537,6 +538,33 @@ func mergeHostGroups(dst map[string]HostGroup, src map[string]HostGroup, source 
 	return mergeErrors
 }
 
+func mergeAuthConfig(dst *AuthConfig, src AuthConfig, source string) []string {
+	var mergeErrors []string
+
+	if isEmptyAuthConfig(src) {
+		return mergeErrors
+	}
+
+	if !isEmptyAuthConfig(*dst) {
+		mergeErrors = append(mergeErrors, fmt.Sprintf("duplicate auth configuration defined in %s", source))
+		return mergeErrors
+	}
+
+	*dst = src
+	return mergeErrors
+}
+
+func isEmptyAuthConfig(authConfig AuthConfig) bool {
+	return strings.TrimSpace(authConfig.Mode) == "" &&
+		strings.TrimSpace(authConfig.UserHeader) == "" &&
+		strings.TrimSpace(authConfig.EmailHeader) == "" &&
+		strings.TrimSpace(authConfig.GroupsHeader) == "" &&
+		strings.TrimSpace(authConfig.LogoutPath) == "" &&
+		len(authConfig.ViewerGroups) == 0 &&
+		len(authConfig.OperatorGroups) == 0 &&
+		len(authConfig.AdminGroups) == 0
+}
+
 func mergeHostDefaults(dst *HostDefaults, src HostDefaults, source string) []string {
 	var mergeErrors []string
 
@@ -594,6 +622,8 @@ func appendUniqueStrings(dst []string, src []string) []string {
 
 func validateConfig(config Config) error {
 	var validationErrors []string
+
+	validationErrors = append(validationErrors, validateAuthConfig(config.Auth)...)
 
 	if config.HostDefaults.Identity != "" {
 		if _, exists := config.Identities[config.HostDefaults.Identity]; !exists {
@@ -721,6 +751,22 @@ func validateConfig(config Config) error {
 	}
 
 	return nil
+}
+
+func validateAuthConfig(authConfig AuthConfig) []string {
+	var validationErrors []string
+
+	if authConfig.Mode == "" {
+		return validationErrors
+	}
+
+	switch strings.ToLower(strings.TrimSpace(authConfig.Mode)) {
+	case "none", "proxy":
+	default:
+		validationErrors = append(validationErrors, fmt.Sprintf("auth.mode %q is invalid: expected \"none\" or \"proxy\"", authConfig.Mode))
+	}
+
+	return validationErrors
 }
 
 func validateCheckDefinition(context string, check Check) []string {

@@ -79,7 +79,220 @@ func getCommand(configPath string) *exec.Cmd {
 	return exec.Command("./"+binaryName, "-mode=check", "-config="+configPath)
 }
 
+type authContext struct {
+	config AuthConfig
+}
+
+func defaultAuthConfig() AuthConfig {
+	return AuthConfig{
+		Mode:         "none",
+		UserHeader:   "X-Forwarded-User",
+		EmailHeader:  "X-Forwarded-Email",
+		GroupsHeader: "X-Forwarded-Groups",
+		LogoutPath:   "/oauth2/sign_out",
+	}
+}
+
+func normalizeAuthConfig(authConfig AuthConfig) AuthConfig {
+	normalized := defaultAuthConfig()
+
+	if mode := strings.ToLower(strings.TrimSpace(authConfig.Mode)); mode != "" {
+		normalized.Mode = mode
+	}
+	if header := strings.TrimSpace(authConfig.UserHeader); header != "" {
+		normalized.UserHeader = header
+	}
+	if header := strings.TrimSpace(authConfig.EmailHeader); header != "" {
+		normalized.EmailHeader = header
+	}
+	if header := strings.TrimSpace(authConfig.GroupsHeader); header != "" {
+		normalized.GroupsHeader = header
+	}
+	if logoutPath := strings.TrimSpace(authConfig.LogoutPath); logoutPath != "" {
+		normalized.LogoutPath = logoutPath
+	}
+
+	normalized.ViewerGroups = uniqueTrimmedStrings(authConfig.ViewerGroups)
+	normalized.OperatorGroups = uniqueTrimmedStrings(authConfig.OperatorGroups)
+	normalized.AdminGroups = uniqueTrimmedStrings(authConfig.AdminGroups)
+
+	return normalized
+}
+
+func loadServerAuthConfig(configPath string) AuthConfig {
+	config, err := loadConfig(configPath)
+	if err != nil {
+		log.Printf("Warning: could not load auth config from %s, falling back to auth.mode=none: %v", configPath, err)
+		return defaultAuthConfig()
+	}
+
+	normalized := normalizeAuthConfig(config.Auth)
+	if validationErrors := validateAuthConfig(normalized); len(validationErrors) > 0 {
+		log.Printf("Warning: invalid auth configuration in %s, forcing auth.mode=proxy: %s", configPath, strings.Join(validationErrors, "; "))
+		normalized.Mode = "proxy"
+	}
+
+	return normalized
+}
+
+func uniqueTrimmedStrings(values []string) []string {
+	seen := make(map[string]struct{})
+	var normalized []string
+
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		normalized = append(normalized, trimmed)
+	}
+
+	return normalized
+}
+
+func splitHeaderValues(value string) []string {
+	return strings.FieldsFunc(value, func(r rune) bool {
+		switch r {
+		case ',', ';', '\n', '\r', '\t':
+			return true
+		default:
+			return false
+		}
+	})
+}
+
+func parseGroups(value string) []string {
+	parts := splitHeaderValues(value)
+	return uniqueTrimmedStrings(parts)
+}
+
+func hasAnyGroup(groups []string, required []string) bool {
+	if len(groups) == 0 || len(required) == 0 {
+		return false
+	}
+
+	groupSet := make(map[string]struct{}, len(groups))
+	for _, group := range groups {
+		groupSet[strings.ToLower(strings.TrimSpace(group))] = struct{}{}
+	}
+
+	for _, group := range required {
+		if _, exists := groupSet[strings.ToLower(strings.TrimSpace(group))]; exists {
+			return true
+		}
+	}
+
+	return false
+}
+
+func firstHeaderValue(r *http.Request, primary string, fallbacks ...string) string {
+	candidates := append([]string{primary}, fallbacks...)
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		value := strings.TrimSpace(r.Header.Get(candidate))
+		if value != "" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+func (a authContext) sessionFromRequest(r *http.Request) AuthSession {
+	session := AuthSession{
+		Mode:        a.config.Mode,
+		Role:        "viewer",
+		Permissions: AuthPermissions{},
+	}
+
+	if a.config.Mode != "proxy" {
+		session.Authenticated = true
+		session.Username = "local"
+		session.Role = "admin"
+		session.Permissions.View = true
+		session.Permissions.Operate = true
+		session.Permissions.Admin = true
+		return session
+	}
+
+	session.Username = firstHeaderValue(r, a.config.UserHeader, "X-Auth-Request-User")
+	session.Email = firstHeaderValue(r, a.config.EmailHeader, "X-Auth-Request-Email")
+	session.Groups = parseGroups(firstHeaderValue(r, a.config.GroupsHeader, "X-Auth-Request-Groups"))
+	session.Authenticated = session.Username != "" || session.Email != ""
+
+	if !session.Authenticated {
+		session.Role = "unauthenticated"
+		return session
+	}
+
+	session.LogoutURL = a.config.LogoutPath
+
+	if hasAnyGroup(session.Groups, a.config.AdminGroups) {
+		session.Role = "admin"
+		session.Permissions.View = true
+		session.Permissions.Operate = true
+		session.Permissions.Admin = true
+		return session
+	}
+
+	if hasAnyGroup(session.Groups, a.config.OperatorGroups) {
+		session.Role = "operator"
+		session.Permissions.View = true
+		session.Permissions.Operate = true
+		return session
+	}
+
+	if hasAnyGroup(session.Groups, a.config.ViewerGroups) {
+		session.Role = "viewer"
+		session.Permissions.View = true
+		return session
+	}
+
+	session.Role = "forbidden"
+
+	return session
+}
+
+func (a authContext) requireRunPermission(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := a.sessionFromRequest(r)
+		if a.config.Mode == "proxy" && !session.Authenticated {
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+			return
+		}
+		if !session.Permissions.Operate {
+			http.Error(w, "Operator role required", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func (a authContext) requireViewPermission(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session := a.sessionFromRequest(r)
+		if a.config.Mode == "proxy" && !session.Authenticated {
+			http.Error(w, "Authentication required", http.StatusUnauthorized)
+			return
+		}
+		if !session.Permissions.View {
+			http.Error(w, "Viewer role required", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func serve(port int, configPath string) {
+	auth := authContext{config: loadServerAuthConfig(configPath)}
+
 	// Serve de build directory
 	subFS, err := fs.Sub(content, "frontend/build")
 	if err != nil {
@@ -112,7 +325,7 @@ func serve(port int, configPath string) {
 	})
 
 	// Endpoint voor de results file
-	http.HandleFunc("/results", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/results", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		data, err := ioutil.ReadFile("results.json")
 		if err != nil {
 			log.Printf("Error reading results file: %v", err)
@@ -121,10 +334,10 @@ func serve(port int, configPath string) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(data)
-	})
+	}))
 
 	// Endpoint voor het uitvoeren van tests
-	http.HandleFunc("/run-tests", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/run-tests", auth.requireRunPermission(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -144,9 +357,9 @@ func serve(port int, configPath string) {
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
 		}
-	})
+	}))
 
-	http.HandleFunc("/api/run-check", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/run-check", auth.requireRunPermission(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -167,6 +380,16 @@ func serve(port int, configPath string) {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
+	}))
+
+	http.HandleFunc("/api/auth/session", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(auth.sessionFromRequest(r))
 	})
 
 	// Endpoint om de versie te serveren
@@ -176,7 +399,7 @@ func serve(port int, configPath string) {
 		json.NewEncoder(w).Encode(versionResponse)
 	})
 
-	http.HandleFunc("/api/preflight", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/preflight", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -185,9 +408,9 @@ func serve(port int, configPath string) {
 		w.Header().Set("Content-Type", "application/json")
 		report := buildPreflightReport(configPath)
 		json.NewEncoder(w).Encode(report)
-	})
+	}))
 
-	http.HandleFunc("/api/history/runs", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/history/runs", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		limit := 20
 		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
@@ -204,9 +427,9 @@ func serve(port int, configPath string) {
 		}
 
 		json.NewEncoder(w).Encode(runs)
-	})
+	}))
 
-	http.HandleFunc("/api/history/events", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/history/events", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		limit := 20
 		var runID *int64
@@ -230,9 +453,9 @@ func serve(port int, configPath string) {
 		}
 
 		json.NewEncoder(w).Encode(events)
-	})
+	}))
 
-	http.HandleFunc("/api/history/sparklines", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/history/sparklines", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		limit := 14
 		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
@@ -249,9 +472,9 @@ func serve(port int, configPath string) {
 		}
 
 		json.NewEncoder(w).Encode(metrics)
-	})
+	}))
 
-	http.HandleFunc("/api/history/check-detail", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/history/check-detail", auth.requireViewPermission(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		host := strings.TrimSpace(r.URL.Query().Get("host"))
@@ -276,7 +499,7 @@ func serve(port int, configPath string) {
 		}
 
 		json.NewEncoder(w).Encode(detail)
-	})
+	}))
 
 	// Start de server
 	addr := fmt.Sprintf(":%d", port)

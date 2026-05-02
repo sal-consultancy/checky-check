@@ -50,7 +50,7 @@ const Sparkline = ({ points }) => {
   );
 };
 
-const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) => {
+const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, authSession }) => {
   const [expandedSections, setExpandedSections] = useState({});
   const [showDetails, setShowDetails] = useState({});
   const [showURLIntro, setShowURLIntro] = useState(false);
@@ -69,6 +69,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
       .then((data) => setSparklineData(data || {}))
       .catch(() => setSparklineData({}));
   }, []);
+
+  const canRerunChecks = authSession?.permissions?.operate ?? true;
 
   if (status === 'config_error') {
     return (
@@ -284,7 +286,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
             <th>Issue</th>
             <th>Timestamp</th>
             <th className="no-print">History</th>
-            <th className="no-print">Action</th>
+            {canRerunChecks && <th className="no-print">Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -336,20 +338,22 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                   View history
                 </button>
               </td>
-              <td className="no-print">
-                <button
-                  className={`button is-small is-light ${rerunLoading[`url:${detail.checkName}`] ? 'is-loading' : ''}`}
-                  onClick={() => rerunTarget(
-                    { kind: 'url_check', check_name: detail.checkName },
-                    `url:${detail.checkName}`,
-                    'url-checks',
-                    detail.title
-                  )}
-                  disabled={rerunLoading[`url:${detail.checkName}`]}
-                >
-                  Re-run
-                </button>
-              </td>
+              {canRerunChecks && (
+                <td className="no-print">
+                  <button
+                    className={`button is-small is-light ${rerunLoading[`url:${detail.checkName}`] ? 'is-loading' : ''}`}
+                    onClick={() => rerunTarget(
+                      { kind: 'url_check', check_name: detail.checkName },
+                      `url:${detail.checkName}`,
+                      'url-checks',
+                      detail.title
+                    )}
+                    disabled={rerunLoading[`url:${detail.checkName}`]}
+                  >
+                    Re-run
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -373,7 +377,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
             <th>Issue</th>
             <th>Timestamp</th>
             <th className="no-print">History</th>
-            <th className="no-print">Action</th>
+            {canRerunChecks && <th className="no-print">Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -410,20 +414,22 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                   View history
                 </button>
               </td>
-              <td className="no-print">
-                <button
-                  className={`button is-small is-light ${rerunLoading[`check:${checkName}:host:${detail.host}`] ? 'is-loading' : ''}`}
-                  onClick={() => rerunTarget(
-                    { kind: 'host_check', check_name: checkName, host: detail.host },
-                    `check:${checkName}:host:${detail.host}`,
-                    `check:${checkName}`,
-                    `${checkTitle} on ${detail.host}`
-                  )}
-                  disabled={rerunLoading[`check:${checkName}:host:${detail.host}`]}
-                >
-                  Re-run host
-                </button>
-              </td>
+              {canRerunChecks && (
+                <td className="no-print">
+                  <button
+                    className={`button is-small is-light ${rerunLoading[`check:${checkName}:host:${detail.host}`] ? 'is-loading' : ''}`}
+                    onClick={() => rerunTarget(
+                      { kind: 'host_check', check_name: checkName, host: detail.host },
+                      `check:${checkName}:host:${detail.host}`,
+                      `check:${checkName}`,
+                      `${checkTitle} on ${detail.host}`
+                    )}
+                    disabled={rerunLoading[`check:${checkName}:host:${detail.host}`]}
+                  >
+                    Re-run host
+                  </button>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -506,6 +512,9 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                   <span className="tag is-success is-light">{passedURLDetails.length} passed</span>
                   <span className="tag is-danger is-light">{failedURLDetails.length} failed</span>
                 </div>
+                {!canRerunChecks && (
+                  <p className="report-check-copy mb-3">Read-only access. URL reruns are limited to operators.</p>
+                )}
                 <div className="buttons-container mb-0 no-print report-inline-buttons">
                   {hasPassedURLs && (
                     <button onClick={() => toggleSection('url-checks-passed')} className="button is-grey is-light is-small">
@@ -595,18 +604,20 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
               </div>
               <div className="report-check-side">
                 <div className="report-check-actions no-print">
-                  <button
-                    className={`button is-small is-light ${rerunLoading[`check:${checkName}`] ? 'is-loading' : ''}`}
-                    onClick={() => rerunTarget(
-                      { kind: 'host_check', check_name: checkName },
-                      `check:${checkName}`,
-                      `check:${checkName}`,
-                      check.title
-                    )}
-                    disabled={rerunLoading[`check:${checkName}`]}
-                  >
-                    Re-run check
-                  </button>
+                  {canRerunChecks && (
+                    <button
+                      className={`button is-small is-light ${rerunLoading[`check:${checkName}`] ? 'is-loading' : ''}`}
+                      onClick={() => rerunTarget(
+                        { kind: 'host_check', check_name: checkName },
+                        `check:${checkName}`,
+                        `check:${checkName}`,
+                        check.title
+                      )}
+                      disabled={rerunLoading[`check:${checkName}`]}
+                    >
+                      Re-run check
+                    </button>
+                  )}
                   <button
                     className="button is-small is-light"
                     onClick={() => toggleDetails(checkName)}
@@ -622,6 +633,9 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status }) 
                 </div>
 
                 <p className="report-check-copy">{check.description}</p>
+                {!canRerunChecks && (
+                  <p className="report-check-copy mb-3">Read-only access. Re-runs are limited to operators.</p>
+                )}
 
                 {showDetails[checkName] && (
                   <div className="check_details has-text-left py-3 px-3 my-3">

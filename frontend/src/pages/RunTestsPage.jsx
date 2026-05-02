@@ -2,14 +2,19 @@ import React, { useState } from 'react';
 
 const RUN_STATUS_PREFIX = '__CHECKY_CHECK_RUN_STATUS__:';
 
-const RunTestsPage = ({ onTestsComplete }) => {
+const RunTestsPage = ({ onTestsComplete, authSession }) => {
   const [loading, setLoading] = useState(false);
   const [output, setOutput] = useState('');
   const [hasRun, setHasRun] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [runStatus, setRunStatus] = useState('idle');
+  const canRunChecks = authSession?.permissions?.operate ?? true;
 
   const runTests = async () => {
+    if (!canRunChecks) {
+      return;
+    }
+
     setLoading(true);
     setHasRun(true);
     setOutput('');
@@ -88,8 +93,14 @@ const RunTestsPage = ({ onTestsComplete }) => {
       <p className="mb-4 has-text-left">
         Start a new run manually. When the run finishes, the latest results are reloaded automatically.
       </p>
+      {!canRunChecks && (
+        <div className="notification is-warning is-light has-text-left">
+          <strong>Read-only access.</strong>
+          <div className="mt-2">Manual runs are limited to operators and admins.</div>
+        </div>
+      )}
       <div className="buttons">
-        <button className={`button is-dark ${loading ? 'is-loading' : ''}`} onClick={runTests} disabled={loading}>
+        <button className={`button is-dark ${loading ? 'is-loading' : ''}`} onClick={runTests} disabled={loading || !canRunChecks}>
           {loading ? 'Running Checks' : 'Run Checks Now'}
         </button>
       </div>
