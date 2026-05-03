@@ -66,7 +66,12 @@ const HistoryPage = () => {
   const [pageErrorMessage, setPageErrorMessage] = useState('');
   const [eventsErrorMessage, setEventsErrorMessage] = useState('');
   const [selectedRunId, setSelectedRunId] = useState(null);
-  const [checkDefinitions, setCheckDefinitions] = useState({ checks: {}, urlChecks: {} });
+  const [checkDefinitions, setCheckDefinitions] = useState({
+    checks: {},
+    urlChecks: {},
+    results: {},
+    urlResults: {},
+  });
   const trendChartRef = useRef(null);
   const trendChartInstanceRef = useRef(null);
   const latestEventsRequestRef = useRef(0);
@@ -138,9 +143,11 @@ const HistoryPage = () => {
         setCheckDefinitions({
           checks: data.checks || {},
           urlChecks: data.url_checks || {},
+          results: data.results || {},
+          urlResults: data.url_results || {},
         });
       })
-      .catch(() => setCheckDefinitions({ checks: {}, urlChecks: {} }));
+      .catch(() => setCheckDefinitions({ checks: {}, urlChecks: {}, results: {}, urlResults: {} }));
   }, []);
 
   useEffect(() => {
@@ -187,6 +194,16 @@ const HistoryPage = () => {
       return checkDefinitions.urlChecks?.[event.check_name] || null;
     }
     return checkDefinitions.checks?.[event.check_name] || null;
+  };
+
+  const getEventVars = (event) => {
+    if (!event?.check_name) {
+      return {};
+    }
+    if (event.host === 'url_checks') {
+      return checkDefinitions.urlResults?.[event.check_name]?.vars || {};
+    }
+    return checkDefinitions.results?.[event.host]?.[event.check_name]?.vars || {};
   };
 
   useEffect(() => {
@@ -438,7 +455,7 @@ const HistoryPage = () => {
                       <td>{event.status ? <span className={`history-status-pill is-${event.status}`}>{event.status}</span> : '-'}</td>
                       <td>{event.value || '-'}</td>
                       <td><code>result {formatFailWhen(checkDefinition?.fail_when)}</code></td>
-                      <td><code>{formatFailValues(checkDefinition?.fail_value)}</code></td>
+                      <td><code>{formatFailValues(checkDefinition?.fail_value, getEventVars(event))}</code></td>
                       <td>
                         {event.error_type ? (
                           <>

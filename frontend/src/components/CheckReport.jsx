@@ -182,6 +182,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
       url: resolveTemplateValue(check.url, result?.vars),
       fail_when: check.fail_when,
       fail_value: check.fail_value,
+      vars: result?.vars || {},
       status: result?.status || 'unknown',
       value: result?.value || 'n/a',
       statusCode: result?.status_code,
@@ -316,7 +317,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                 {Number.isFinite(detail.statusCode) && detail.statusCode > 0 ? <div className="error-detail-text">HTTP {detail.statusCode}</div> : null}
               </td>
               <td><code>result {formatFailWhen(detail.fail_when)}</code></td>
-              <td><code>{formatFailValues(detail.fail_value)}</code></td>
+              <td><code>{formatFailValues(detail.fail_value, detail.vars)}</code></td>
               <td>{Number.isFinite(detail.latencyMs) ? `${detail.latencyMs} ms` : '--'}</td>
               <td>
                 {detail.error_type ? (
@@ -399,7 +400,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
               <td>{detail.status}</td>
               <td>{detail.value}</td>
               <td><code>result {formatFailWhen(check.fail_when)}</code></td>
-              <td><code>{formatFailValues(check.fail_value)}</code></td>
+              <td><code>{formatFailValues(check.fail_value, detail.vars)}</code></td>
               {sparklineEnabled && (
                 <td>
                   <Sparkline points={sparklineData?.[detail.host]?.[checkName] || []} />

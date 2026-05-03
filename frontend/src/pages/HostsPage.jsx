@@ -187,7 +187,7 @@ const HostsPage = ({ results, checks, status }) => {
                         <td>{row.status}</td>
                         <td>{row.value}</td>
                         <td><code>result {formatFailWhen(row.fail_when)}</code></td>
-                        <td><code>{formatFailValues(row.fail_value)}</code></td>
+                        <td><code>{formatFailValues(row.fail_value, row.vars)}</code></td>
                         <td>
                           {row.sparkline?.enabled ? <Sparkline points={row.sparklinePoints} /> : '--'}
                         </td>
