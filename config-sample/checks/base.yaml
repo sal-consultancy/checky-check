@@ -4,4 +4,6 @@ checks:
     description: Controleer de uptime van de host
     command: "awk '{print int($1 / 86400)}' /proc/uptime"
     fail_when: ">"
-    fail_value: "90"
+    fail_value: ${uptime_limit}
+    vars:
+      uptime_limit: "77"

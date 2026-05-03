@@ -6,6 +6,8 @@ host_groups:
         instance_nr: "00"
     hosts:
       dos.salconsultancy.nl:
+        host_vars:
+          uptime_limit: "88"
         host_template: sap_app_server
         host_checks:
           - check_sap_instance
