@@ -22,7 +22,7 @@ const RunTestsPage = ({ onTestsComplete, authSession }) => {
     setRunStatus('running');
 
     try {
-      const response = await fetch('/run-tests', { method: 'POST' });
+      const response = await fetch('/api/run-tests', { method: 'POST' });
       let currentRunStatus = 'running';
 
       if (!response.ok) {

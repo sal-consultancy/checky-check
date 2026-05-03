@@ -300,6 +300,19 @@ func serve(port int, configPath string) {
 	}
 
 	fileServer := http.FileServer(http.FS(subFS))
+	serveFrontendIndex := func(w http.ResponseWriter, r *http.Request) {
+		indexBytes, err := fs.ReadFile(subFS, "index.html")
+		if err != nil {
+			log.Printf("Error reading embedded index.html: %v", err)
+			http.Error(w, "Could not read frontend index", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write(indexBytes)
+	}
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		requestPath := strings.TrimPrefix(r.URL.Path, "/")
 		if requestPath == "" {
@@ -312,16 +325,7 @@ func serve(port int, configPath string) {
 			return
 		}
 
-		indexBytes, err := fs.ReadFile(subFS, "index.html")
-		if err != nil {
-			log.Printf("Error reading embedded index.html: %v", err)
-			http.Error(w, "Could not read frontend index", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write(indexBytes)
+		serveFrontendIndex(w, r)
 	})
 
 	// Endpoint voor de results file
@@ -336,8 +340,7 @@ func serve(port int, configPath string) {
 		w.Write(data)
 	}))
 
-	// Endpoint voor het uitvoeren van tests
-	http.HandleFunc("/run-tests", auth.requireRunPermission(func(w http.ResponseWriter, r *http.Request) {
+	runTestsHandler := auth.requireRunPermission(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -357,7 +360,20 @@ func serve(port int, configPath string) {
 		if flusher, ok := w.(http.Flusher); ok {
 			flusher.Flush()
 		}
-	}))
+	})
+
+	// Endpoint voor het uitvoeren van tests
+	http.HandleFunc("/api/run-tests", runTestsHandler)
+
+	// Backward-compatible route: POST runs checks, GET serves the React route.
+	http.HandleFunc("/run-tests", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			serveFrontendIndex(w, r)
+			return
+		}
+
+		runTestsHandler(w, r)
+	})
 
 	http.HandleFunc("/api/run-check", auth.requireRunPermission(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
