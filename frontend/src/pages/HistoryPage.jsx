@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Chart } from 'chart.js/auto';
+import { formatFailValues, formatFailWhen } from '../utils/checkFormatting';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
@@ -65,6 +66,7 @@ const HistoryPage = () => {
   const [pageErrorMessage, setPageErrorMessage] = useState('');
   const [eventsErrorMessage, setEventsErrorMessage] = useState('');
   const [selectedRunId, setSelectedRunId] = useState(null);
+  const [checkDefinitions, setCheckDefinitions] = useState({ checks: {}, urlChecks: {} });
   const trendChartRef = useRef(null);
   const trendChartInstanceRef = useRef(null);
   const latestEventsRequestRef = useRef(0);
@@ -127,6 +129,21 @@ const HistoryPage = () => {
   }, []);
 
   useEffect(() => {
+    fetch('/results')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!data) {
+          return;
+        }
+        setCheckDefinitions({
+          checks: data.checks || {},
+          urlChecks: data.url_checks || {},
+        });
+      })
+      .catch(() => setCheckDefinitions({ checks: {}, urlChecks: {} }));
+  }, []);
+
+  useEffect(() => {
     if (loading) {
       return;
     }
@@ -161,6 +178,16 @@ const HistoryPage = () => {
       .reverse();
     return recentRuns;
   }, [runs]);
+
+  const getEventCheckDefinition = (event) => {
+    if (!event?.check_name) {
+      return null;
+    }
+    if (event.host === 'url_checks') {
+      return checkDefinitions.urlChecks?.[event.check_name] || null;
+    }
+    return checkDefinitions.checks?.[event.check_name] || null;
+  };
 
   useEffect(() => {
     if (!trendChartRef.current || trendRuns.length === 0) {
@@ -393,29 +420,36 @@ const HistoryPage = () => {
                   <th>Check</th>
                   <th>Status</th>
                   <th>Value</th>
+                  <th>Failed when</th>
+                  <th>Failed value(s)</th>
                   <th>Issue</th>
                 </tr>
               </thead>
               <tbody>
-                {visibleEvents.map((event) => (
-                  <tr key={event.id}>
-                    <td><span className="history-run-id">#{event.run_id}</span></td>
-                    <td><span className="history-time">{event.event_time}</span></td>
-                    <td><span className="history-pill">{formatEventType(event.event_type)}</span></td>
-                    <td>{formatEventHost(event.host)}</td>
-                    <td>{event.check_name || '-'}</td>
-                    <td>{event.status ? <span className={`history-status-pill is-${event.status}`}>{event.status}</span> : '-'}</td>
-                    <td>{event.value || '-'}</td>
-                    <td>
-                      {event.error_type ? (
-                        <>
-                          <span className="tag is-warning is-light">{formatErrorType(event.error_type)}</span>
-                          {event.error_message && <div className="error-detail-text">{event.error_message}</div>}
-                        </>
-                      ) : '-'}
-                    </td>
-                  </tr>
-                ))}
+                {visibleEvents.map((event) => {
+                  const checkDefinition = getEventCheckDefinition(event);
+                  return (
+                    <tr key={event.id}>
+                      <td><span className="history-run-id">#{event.run_id}</span></td>
+                      <td><span className="history-time">{event.event_time}</span></td>
+                      <td><span className="history-pill">{formatEventType(event.event_type)}</span></td>
+                      <td>{formatEventHost(event.host)}</td>
+                      <td>{event.check_name || '-'}</td>
+                      <td>{event.status ? <span className={`history-status-pill is-${event.status}`}>{event.status}</span> : '-'}</td>
+                      <td>{event.value || '-'}</td>
+                      <td><code>result {formatFailWhen(checkDefinition?.fail_when)}</code></td>
+                      <td><code>{formatFailValues(checkDefinition?.fail_value)}</code></td>
+                      <td>
+                        {event.error_type ? (
+                          <>
+                            <span className="tag is-warning is-light">{formatErrorType(event.error_type)}</span>
+                            {event.error_message && <div className="error-detail-text">{event.error_message}</div>}
+                          </>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

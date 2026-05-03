@@ -1,14 +1,14 @@
-# auth:
-#   mode: none
 auth:
-  mode: proxy
-  user_header: X-Forwarded-User
-  email_header: X-Forwarded-Email
-  groups_header: X-Forwarded-Groups
-  logout_path: /oauth2/sign_out
-  viewer_groups:
-    - checkycheck-viewer
-  operator_groups:
-    - checkycheck-operator
-  admin_groups:
-    - checkycheck-admin
+  mode: none
+# auth:
+#   mode: proxy
+#   user_header: X-Forwarded-User
+#   email_header: X-Forwarded-Email
+#   groups_header: X-Forwarded-Groups
+#   logout_path: /oauth2/sign_out
+#   viewer_groups:
+#     - checkycheck-viewer
+#   operator_groups:
+#     - checkycheck-operator
+#   admin_groups:
+#     - checkycheck-admin

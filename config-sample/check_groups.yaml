@@ -1,8 +1,5 @@
 check_groups:
   sap_os:
-    vars:
-      sap:
-        instance_nr: "00"
     checks:
       - check_uptime
   sap_app:

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { formatFailValues, formatFailWhen } from '../utils/checkFormatting';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
@@ -169,6 +170,8 @@ const CheckHistoryModal = ({ detailTarget, onClose }) => {
               {detailTarget.status || 'unknown'}
             </span>
             <span className="history-pill">Current value: {detailTarget.value ?? 'n/a'}</span>
+            <span className="history-pill">Failed when: result {formatFailWhen(detailTarget.failWhen)}</span>
+            <span className="history-pill">Failed value(s): {formatFailValues(detailTarget.failValue)}</span>
             {latestMetric && (
               <span className="history-pill">Latest full run: {latestMetric.generated_at}</span>
             )}
@@ -194,6 +197,8 @@ const CheckHistoryModal = ({ detailTarget, onClose }) => {
                         <tr>
                           <th>Time</th>
                           <th>Value</th>
+                          <th>Failed when</th>
+                          <th>Failed value(s)</th>
                           <th>Status</th>
                           <th>Run</th>
                         </tr>
@@ -203,6 +208,8 @@ const CheckHistoryModal = ({ detailTarget, onClose }) => {
                           <tr key={`${metric.run_id}-${metric.generated_at}`}>
                             <td>{metric.generated_at}</td>
                             <td>{metric.value}</td>
+                            <td><code>result {formatFailWhen(detailTarget.failWhen)}</code></td>
+                            <td><code>{formatFailValues(detailTarget.failValue)}</code></td>
                             <td>
                               <span className={`history-status-pill is-${metric.status || 'unknown'}`}>
                                 {metric.status || 'unknown'}
@@ -235,6 +242,8 @@ const CheckHistoryModal = ({ detailTarget, onClose }) => {
                           <th>Event</th>
                           <th>Status</th>
                           <th>Value</th>
+                          <th>Failed when</th>
+                          <th>Failed value(s)</th>
                           <th>Issue</th>
                           <th>Run</th>
                         </tr>
@@ -250,6 +259,8 @@ const CheckHistoryModal = ({ detailTarget, onClose }) => {
                               </span>
                             </td>
                             <td>{event.value || '--'}</td>
+                            <td><code>result {formatFailWhen(detailTarget.failWhen)}</code></td>
+                            <td><code>{formatFailValues(detailTarget.failValue)}</code></td>
                             <td>
                               {event.error_type ? (
                                 <>

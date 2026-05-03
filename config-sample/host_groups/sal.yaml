@@ -3,6 +3,7 @@ host_groups:
     host_vars:
       sap:
         sid: PRD
+        instance_nr: "00"
     hosts:
       dos.salconsultancy.nl:
         host_template: sap_app_server

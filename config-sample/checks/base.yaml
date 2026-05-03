@@ -2,6 +2,6 @@ checks:
   check_uptime:
     title: Uptime
     description: Controleer de uptime van de host
-    command: "uptime | awk '{print $3}'"
+    command: "awk '{print int($1 / 86400)}' /proc/uptime"
     fail_when: ">"
     fail_value: "90"

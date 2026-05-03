@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ChartComponent from './ChartComponent';
 import { FaChevronDown, FaChevronUp, FaPlus, FaMinus, FaTimes } from 'react-icons/fa';
 import CheckHistoryModal from './CheckHistoryModal';
+import { formatFailValues, formatFailWhen } from '../utils/checkFormatting';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
@@ -179,6 +180,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
       title: check.title,
       description: check.description,
       url: resolveTemplateValue(check.url, result?.vars),
+      fail_when: check.fail_when,
+      fail_value: check.fail_value,
       status: result?.status || 'unknown',
       value: result?.value || 'n/a',
       statusCode: result?.status_code,
@@ -282,6 +285,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
             <th>URL</th>
             <th>Status</th>
             <th>Value</th>
+            <th>Failed when</th>
+            <th>Failed value(s)</th>
             <th>Latency</th>
             <th>Issue</th>
             <th>Timestamp</th>
@@ -310,6 +315,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                 {detail.value}
                 {Number.isFinite(detail.statusCode) && detail.statusCode > 0 ? <div className="error-detail-text">HTTP {detail.statusCode}</div> : null}
               </td>
+              <td><code>result {formatFailWhen(detail.fail_when)}</code></td>
+              <td><code>{formatFailValues(detail.fail_value)}</code></td>
               <td>{Number.isFinite(detail.latencyMs) ? `${detail.latencyMs} ms` : '--'}</td>
               <td>
                 {detail.error_type ? (
@@ -333,6 +340,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                     checkTitle: detail.title,
                     status: detail.status,
                     value: detail.value,
+                    failWhen: detail.fail_when,
+                    failValue: detail.fail_value,
                   })}
                 >
                   View history
@@ -362,7 +371,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
   );
 
   const renderHostTable = (checkName, checkTitle, details, heading, isFailedTable) => {
-    const sparklineEnabled = Boolean(checks[checkName]?.sparkline?.enabled);
+    const check = checks[checkName] || {};
+    const sparklineEnabled = Boolean(check.sparkline?.enabled);
 
     return (
     <>
@@ -373,6 +383,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
             <th>Host</th>
             <th>Status</th>
             <th>Value</th>
+            <th>Failed when</th>
+            <th>Failed value(s)</th>
             {sparklineEnabled && <th>Trend</th>}
             <th>Issue</th>
             <th>Timestamp</th>
@@ -386,6 +398,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
               <td>{detail.host}</td>
               <td>{detail.status}</td>
               <td>{detail.value}</td>
+              <td><code>result {formatFailWhen(check.fail_when)}</code></td>
+              <td><code>{formatFailValues(check.fail_value)}</code></td>
               {sparklineEnabled && (
                 <td>
                   <Sparkline points={sparklineData?.[detail.host]?.[checkName] || []} />
@@ -409,6 +423,8 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                     checkTitle,
                     status: detail.status,
                     value: detail.value,
+                    failWhen: check.fail_when,
+                    failValue: check.fail_value,
                   })}
                 >
                   View history
@@ -652,10 +668,10 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                           ? check.fail_value.map((val, valueIndex) => (
                               <span key={valueIndex}>
                                 <span>{valueIndex > 0 ? ' or ' : ''}</span>
-                                <code>result {check.fail_when} {val}</code>
+                                <code>result {formatFailWhen(check.fail_when)} {val}</code>
                               </span>
                             ))
-                          : <code>result {check.fail_when} {check.fail_value}</code>}
+                          : <code>result {formatFailWhen(check.fail_when)} {formatFailValues(check.fail_value)}</code>}
                       </span>
                     </p>
                   </div>

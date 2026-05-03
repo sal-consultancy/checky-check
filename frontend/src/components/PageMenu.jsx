@@ -39,22 +39,6 @@ const PageMenu = () => {
             History
           </Link>
         </li>
-        <li>
-          <Link
-            to="/diagnostics"
-            className={location.pathname === "/diagnostics" ? "is-active" : ""}
-          >
-            Diagnostics
-          </Link>
-        </li>
-        <li>
-          <Link
-            to="/help"
-            className={location.pathname === "/help" ? "is-active" : ""}
-          >
-            Help
-          </Link>
-        </li>
       </ul>
     </nav>
   );

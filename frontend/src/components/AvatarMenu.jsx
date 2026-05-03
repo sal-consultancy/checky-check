@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaChevronDown, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaChevronDown, FaQuestionCircle, FaSignOutAlt, FaTools, FaUserCircle } from 'react-icons/fa';
 import ThemeToggle from './ThemeToggle';
 
 const AvatarMenu = ({ authSession, themePreference, onThemeChange }) => {
@@ -37,9 +38,10 @@ const AvatarMenu = ({ authSession, themePreference, onThemeChange }) => {
   }, []);
 
   const displayName = useMemo(() => {
+    if (authSession?.mode !== 'proxy') return 'Local';
     if (authSession?.username) return authSession.username;
     if (authSession?.email) return authSession.email;
-    return authSession?.mode === 'proxy' ? 'Guest' : 'Local';
+    return 'Guest';
   }, [authSession]);
 
   const avatarLabel = useMemo(() => {
@@ -48,6 +50,12 @@ const AvatarMenu = ({ authSession, themePreference, onThemeChange }) => {
     return source.charAt(0).toUpperCase();
   }, [displayName]);
 
+  const roleLabel = useMemo(() => {
+    const role = authSession?.role || 'viewer';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  }, [authSession]);
+
+  const showAdminActions = authSession?.permissions?.admin;
   const showLogout = authSession?.mode === 'proxy' && authSession?.authenticated && authSession?.logout_url;
 
   return (
@@ -65,7 +73,6 @@ const AvatarMenu = ({ authSession, themePreference, onThemeChange }) => {
         </span>
         <span className="avatar-menu-meta">
           <span className="avatar-menu-name">{displayName}</span>
-          <span className="avatar-menu-role">{authSession?.role || 'viewer'}</span>
         </span>
         <FaChevronDown className={`avatar-menu-chevron${open ? ' is-open' : ''}`} aria-hidden="true" />
       </button>
@@ -73,9 +80,32 @@ const AvatarMenu = ({ authSession, themePreference, onThemeChange }) => {
       {open && (
         <div ref={menuRef} className="avatar-menu-panel" role="menu">
           <div className="avatar-menu-section">
+            <div className="avatar-menu-section-label">Clearance</div>
+            <div className="avatar-menu-clearance">{roleLabel}</div>
+          </div>
+
+          <div className="avatar-menu-section">
             <div className="avatar-menu-section-label">Appearance</div>
             <ThemeToggle value={themePreference} onChange={onThemeChange} />
           </div>
+
+          <div className="avatar-menu-section">
+            <div className="avatar-menu-section-label">Support</div>
+            <Link className="avatar-menu-link" to="/help" onClick={() => setOpen(false)}>
+              <FaQuestionCircle aria-hidden="true" />
+              <span>Help</span>
+            </Link>
+          </div>
+
+          {showAdminActions && (
+            <div className="avatar-menu-section">
+              <div className="avatar-menu-section-label">Admin</div>
+              <Link className="avatar-menu-link" to="/diagnostics" onClick={() => setOpen(false)}>
+                <FaTools aria-hidden="true" />
+                <span>Diagnostics</span>
+              </Link>
+            </div>
+          )}
 
           {showLogout && (
             <div className="avatar-menu-section">

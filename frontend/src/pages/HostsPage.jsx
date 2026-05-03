@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaChevronDown, FaChevronUp, FaTimes } from 'react-icons/fa';
 import CheckHistoryModal from '../components/CheckHistoryModal';
+import { formatFailValues, formatFailWhen } from '../utils/checkFormatting';
 
 const formatErrorType = (errorType) => {
   if (!errorType) return '';
@@ -63,6 +64,8 @@ const HostsPage = ({ results, checks, status }) => {
         checkName,
         title: checks[checkName]?.title || checkName,
         description: checks[checkName]?.description || '',
+        fail_when: checks[checkName]?.fail_when,
+        fail_value: checks[checkName]?.fail_value,
         sparkline: checks[checkName]?.sparkline || {},
         sparklinePoints: sparklineData?.[host]?.[checkName] || [],
         ...hostResults[checkName],
@@ -166,6 +169,8 @@ const HostsPage = ({ results, checks, status }) => {
                       <th>Check</th>
                       <th>Status</th>
                       <th>Value</th>
+                      <th>Failed when</th>
+                      <th>Failed value(s)</th>
                       <th>Trend</th>
                       <th>Issue</th>
                       <th>Timestamp</th>
@@ -181,6 +186,8 @@ const HostsPage = ({ results, checks, status }) => {
                         </td>
                         <td>{row.status}</td>
                         <td>{row.value}</td>
+                        <td><code>result {formatFailWhen(row.fail_when)}</code></td>
+                        <td><code>{formatFailValues(row.fail_value)}</code></td>
                         <td>
                           {row.sparkline?.enabled ? <Sparkline points={row.sparklinePoints} /> : '--'}
                         </td>
@@ -202,6 +209,8 @@ const HostsPage = ({ results, checks, status }) => {
                               checkTitle: row.title,
                               status: row.status,
                               value: row.value,
+                              failWhen: row.fail_when,
+                              failValue: row.fail_value,
                             })}
                           >
                             View history

@@ -38,7 +38,7 @@ checks:
   check_uptime:
     title: Uptime
     description: Controleer de uptime van de host
-    command: "uptime | awk '{print $3}'"
+    command: "awk '{print int($1 / 86400)}' /proc/uptime"
     fail_when: ">"
     fail_value: "90"
 
@@ -51,6 +51,16 @@ checks:
     vars:
       sap:
         profile_path: /usr/sap/${sap.sid}/SYS/profile
+
+url_checks:
+  check_github_url:
+    title: GitHub URL
+    description: Controleer of github.com bereikbaar is vanaf de controller
+    url: https://github.com
+    fail_when: "!="
+    fail_value: "200"
+    timeout: 10s
+    follow_redirects: true
 
 host_groups:
   sal-1:
