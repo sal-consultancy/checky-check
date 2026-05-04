@@ -156,6 +156,7 @@ type HistoryRun struct {
 	CheckCount   int            `json:"check_count"`
 	PassedCount  int            `json:"passed_count"`
 	FailedCount  int            `json:"failed_count"`
+	EventCount   int            `json:"event_count"`
 	DurationMs   int64          `json:"duration_ms"`
 	ErrorSummary map[string]int `json:"error_summary"`
 }

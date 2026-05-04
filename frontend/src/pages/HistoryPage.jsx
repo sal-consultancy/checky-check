@@ -344,6 +344,7 @@ const HistoryPage = () => {
                   <th>Checks</th>
                   <th>Passed</th>
                   <th>Failed</th>
+                  <th>Events</th>
                   <th>Duration</th>
                   <th>Issues</th>
                   <th>View</th>
@@ -353,6 +354,7 @@ const HistoryPage = () => {
                 {visibleRuns.map((run) => {
                   const isSelected = run.id === selectedRunId;
                   const issueSummary = renderErrorSummary(run.error_summary);
+                  const eventCount = Number.isFinite(run.event_count) ? run.event_count : 0;
                   return (
                     <tr key={run.id} className={isSelected ? 'history-run-row is-current' : 'history-run-row'}>
                       <td><span className="history-run-id">#{run.id}</span></td>
@@ -364,6 +366,7 @@ const HistoryPage = () => {
                       <td><span className="history-metric">{run.check_count}</span></td>
                       <td><span className="history-metric is-passed">{run.passed_count}</span></td>
                       <td><span className="history-metric is-failed">{run.failed_count}</span></td>
+                      <td><span className="history-metric">{eventCount}</span></td>
                       <td><span className="history-time">{formatDuration(run.duration_ms)}</span></td>
                       <td>
                         {issueSummary ? (
@@ -379,13 +382,17 @@ const HistoryPage = () => {
                         )}
                       </td>
                       <td>
-                        <button
-                          className={isSelected ? 'button history-view-button is-current' : 'button history-view-button'}
-                          type="button"
-                          onClick={() => setSelectedRunId(isSelected ? null : run.id)}
-                        >
-                          {isSelected ? 'Viewing' : 'View Run'}
-                        </button>
+                        {eventCount > 0 ? (
+                          <button
+                            className={isSelected ? 'button history-view-button is-current' : 'button history-view-button'}
+                            type="button"
+                            onClick={() => setSelectedRunId(isSelected ? null : run.id)}
+                          >
+                            {isSelected ? 'Viewing events' : 'View Events'}
+                          </button>
+                        ) : (
+                          <span className="history-muted">No events</span>
+                        )}
                       </td>
                     </tr>
                   );

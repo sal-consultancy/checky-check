@@ -37,6 +37,9 @@ body {
   --app-success-border: #b9dfc8;
   --app-success-text: #17633a;
   --app-code-background: #f5f7fb;
+  --app-accent-surface: #eef2ff;
+  --app-accent-border: #6c83ff;
+  --app-accent-text: #243b95;
 }
 
 [data-theme='dark'] {
@@ -59,6 +62,9 @@ body {
   --app-success-border: #35684a;
   --app-success-text: #b7f2cf;
   --app-code-background: #111923;
+  --app-accent-surface: #1c2747;
+  --app-accent-border: #7f94ff;
+  --app-accent-text: #dfe5ff;
 }
 
 .App {
@@ -760,7 +766,7 @@ code {
 .history-run-row.is-current {
   position: relative;
   background: var(--app-surface);
-  box-shadow: inset 3px 0 0 #6c83ff;
+  box-shadow: inset 3px 0 0 var(--app-accent-border);
 }
 
 .history-run-row.is-current td {
@@ -832,9 +838,9 @@ code {
 }
 
 .history-view-button.is-current {
-  border-color: #6c83ff;
-  background: rgba(108, 131, 255, 0.1);
-  color: #dfe5ff;
+  border-color: var(--app-accent-border);
+  background: var(--app-accent-surface);
+  color: var(--app-accent-text);
 }
 
 .history-empty-state {

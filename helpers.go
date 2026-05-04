@@ -1095,6 +1095,7 @@ func writeHistoryWithMetadata(resultData ResultFile, previousResultData ResultFi
 		CheckCount:   checkCount,
 		PassedCount:  passedCount,
 		FailedCount:  failedCount,
+		EventCount:   len(events),
 		DurationMs:   duration.Milliseconds(),
 		ErrorSummary: buildRunErrorSummary(resultData),
 	}, nil
@@ -1462,9 +1463,27 @@ func readRecentRuns(limit int) ([]HistoryRun, error) {
 	defer db.Close()
 
 	rows, err := db.Query(`
-		SELECT id, generated_at, status, run_type, target_kind, target_name, target_scope, host_count, check_count, passed_count, failed_count, duration_ms, error_summary
+		SELECT
+			id,
+			generated_at,
+			status,
+			run_type,
+			target_kind,
+			target_name,
+			target_scope,
+			host_count,
+			check_count,
+			passed_count,
+			failed_count,
+			(
+				SELECT COUNT(*)
+				FROM events
+				WHERE events.run_id = runs.id
+			) AS event_count,
+			duration_ms,
+			error_summary
 		FROM runs
-		ORDER BY id DESC
+		ORDER BY runs.id DESC
 		LIMIT ?
 	`, limit)
 	if err != nil {
@@ -1488,6 +1507,7 @@ func readRecentRuns(limit int) ([]HistoryRun, error) {
 			&run.CheckCount,
 			&run.PassedCount,
 			&run.FailedCount,
+			&run.EventCount,
 			&run.DurationMs,
 			&errorSummaryJSON,
 		); err != nil {
