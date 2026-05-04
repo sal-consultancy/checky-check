@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   release:
-    name: Build Linux Release
+    name: Build Release
     runs-on: ubuntu-latest
 
     steps:
@@ -44,19 +44,27 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      - name: Build Linux binary
+      - name: Build release binaries
         shell: bash
         run: |
           set -euo pipefail
           TAG="${{ inputs.tag || github.ref_name }}"
           VERSION="${TAG#v}"
           OUTDIR="dist"
-          ARTIFACT_DIR="${OUTDIR}/checkycheck-${TAG}-linux-amd64"
-          mkdir -p "${ARTIFACT_DIR}"
+
+          LINUX_ARTIFACT_DIR="${OUTDIR}/checkycheck-${TAG}-linux-amd64"
+          mkdir -p "${LINUX_ARTIFACT_DIR}"
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-            go build -ldflags="-X main.AppVersion=${VERSION}" -o "${ARTIFACT_DIR}/checkycheck" .
+            go build -ldflags="-X main.AppVersion=${VERSION}" -o "${LINUX_ARTIFACT_DIR}/checkycheck" .
           tar -C "${OUTDIR}" -czf "${OUTDIR}/checkycheck-${TAG}-linux-amd64.tar.gz" "checkycheck-${TAG}-linux-amd64"
-          sha256sum "${OUTDIR}/checkycheck-${TAG}-linux-amd64.tar.gz" > "${OUTDIR}/checksums.txt"
+
+          WINDOWS_ARTIFACT_DIR="${OUTDIR}/checkycheck-${TAG}-windows-amd64"
+          mkdir -p "${WINDOWS_ARTIFACT_DIR}"
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 \
+            go build -ldflags="-X main.AppVersion=${VERSION}" -o "${WINDOWS_ARTIFACT_DIR}/checkycheck.exe" .
+          (cd "${OUTDIR}" && zip -r "checkycheck-${TAG}-windows-amd64.zip" "checkycheck-${TAG}-windows-amd64")
+
+          sha256sum "${OUTDIR}/checkycheck-${TAG}-linux-amd64.tar.gz" "${OUTDIR}/checkycheck-${TAG}-windows-amd64.zip" > "${OUTDIR}/checksums.txt"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -85,4 +93,5 @@ jobs:
           generate_release_notes: true
           files: |
             dist/checkycheck-*.tar.gz
+            dist/checkycheck-*.zip
             dist/checksums.txt
