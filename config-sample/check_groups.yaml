@@ -1,0 +1,10 @@
+check_groups:
+  sap_os:
+    checks:
+      - check_uptime
+  sap_app:
+    vars:
+      sap:
+        profile_path: /usr/sap/${sap.sid}/SYS/profile
+    checks:
+      - check_sap_profile_dir

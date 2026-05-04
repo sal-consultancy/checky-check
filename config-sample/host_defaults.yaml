@@ -1,0 +1,7 @@
+host_defaults:
+  identity: id1
+  host_vars:
+    monitoring:
+      timezone: Europe/Amsterdam
+  check_groups:
+    - sap_os

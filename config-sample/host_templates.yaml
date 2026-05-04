@@ -1,0 +1,7 @@
+host_templates:
+  sap_app_server:
+    host_vars:
+      sap:
+        sid: ECC
+    check_groups:
+      - sap_app

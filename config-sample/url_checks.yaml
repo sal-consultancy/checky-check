@@ -1,0 +1,9 @@
+url_checks:
+  check_github_url:
+    title: GitHub URL
+    description: Controleer of github.com bereikbaar is vanaf de controller
+    url: https://github.com
+    fail_when: "!="
+    fail_value: "200"
+    timeout: 10s
+    follow_redirects: true

@@ -1,0 +1,17 @@
+checks:
+  check_sap_profile_dir:
+    title: SAP Profile Directory
+    description: Controleer of de profile directory bestaat
+    command: "test -d ${sap.profile_path} && echo OK || echo NOK"
+    fail_when: "!="
+    fail_value: OK
+    vars:
+      sap:
+        profile_path: /usr/sap/${sap.sid}/SYS/profile
+
+  check_sap_instance:
+    title: SAP Instance Number
+    description: Toon het instance-nummer uit de geneste variabelen
+    command: "echo ${sap.instance_nr}"
+    fail_when: "!="
+    fail_value: "00"
