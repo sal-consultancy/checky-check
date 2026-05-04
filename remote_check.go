@@ -59,6 +59,18 @@ func describeErrorType(errorType string) string {
 		return "SSH Connection Error"
 	case "ssh_session_error":
 		return "SSH Session Error"
+	case "ssm_config_error":
+		return "SSM Configuration Error"
+	case "ssm_send_command_error":
+		return "SSM Send Command Error"
+	case "ssm_invocation_error":
+		return "SSM Invocation Error"
+	case "ssm_timeout":
+		return "SSM Timeout"
+	case "ssm_command_error":
+		return "SSM Command Error"
+	case "ssm_unexpected_status":
+		return "SSM Unexpected Status"
 	case "command_error":
 		return "Command Error"
 	case "url_timeout":
@@ -437,10 +449,16 @@ func resolveIdentityName(config Config, hostConfig Host, hostGroup HostGroup) st
 	identityName := config.HostDefaults.Identity
 	if hostConfig.HostTemplate != "" {
 		if template, exists := config.HostTemplates[hostConfig.HostTemplate]; exists {
+			if template.Identity != "" {
+				identityName = template.Identity
+			}
 			if id, exists := getTopLevelString(template.HostVars, "identity"); exists {
 				identityName = id
 			}
 		}
+	}
+	if hostGroup.Identity != "" {
+		identityName = hostGroup.Identity
 	}
 	if id, exists := getTopLevelString(hostGroup.HostVars, "identity"); exists {
 		identityName = id
@@ -551,6 +569,27 @@ func executeHostCheck(config Config, host string, hostConfig Host, hostGroup Hos
 		result, err = runLocalCommand(command, timeout)
 		if err != nil {
 			logger.Printf("Failed to run local command %s: %v\n", command, err)
+			result, errorType, errorMessage := errorDetailsFrom(err, result)
+			return appendExecutionFailureResult(host, checkName, result, errorType, errorMessage, resolvedVars), nil
+		}
+		checkFailed = evaluateCondition(result, check.FailWhen, resolvedFailValue)
+	} else if isAWSSSMIdentity(identity) {
+		if check.Command == "" {
+			return appendExecutionFailureResult(
+				host,
+				checkName,
+				"",
+				"ssm_config_error",
+				fmt.Sprintf("aws_ssm identity for host %s only supports command checks", host),
+				resolvedVars,
+			), nil
+		}
+
+		command := replaceVariables(check.Command, resolvedVars)
+		logger.Printf("Running SSM command on host %s: %s", host, command)
+		result, err = runSSMCommand(identity, host, hostConfig.Target, command, timeout)
+		if err != nil {
+			logger.Printf("Failed to run SSM command %s on host %s: %v\n", command, host, err)
 			result, errorType, errorMessage := errorDetailsFrom(err, result)
 			return appendExecutionFailureResult(host, checkName, result, errorType, errorMessage, resolvedVars), nil
 		}

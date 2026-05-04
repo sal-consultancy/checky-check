@@ -37,7 +37,7 @@ func main() {
 	}
 
 	configPath := flag.String("config", defaultConfigPath, "Path to the config file or config directory")
-	mode := flag.String("mode", "check", "Mode to run: check, report, or serve")
+	mode := flag.String("mode", "check", "Mode to run: check or serve")
 	port := flag.Int("port", 8070, "Port to run the server on")
 	showVersion := flag.Bool("version", false, "Show application version") // -version flag
 	flag.Parse()
@@ -74,7 +74,7 @@ func getCommand(configPath string) *exec.Cmd {
 	}
 	if _, err := os.Stat(binaryName); os.IsNotExist(err) {
 		// Fallback to running the Go files directly if the binary doesn't exist
-		return exec.Command("go", "run", "main.go", "remote_check.go", "types.go", "helpers.go", "-mode=check", "-config="+configPath)
+		return exec.Command("go", "run", ".", "-mode=check", "-config="+configPath)
 	}
 	return exec.Command("./"+binaryName, "-mode=check", "-config="+configPath)
 }

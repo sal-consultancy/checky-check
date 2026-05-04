@@ -590,7 +590,6 @@ func mergeReport(dst *Report, src Report, source string) []string {
 	mergeErrors = append(mergeErrors, mergeStringField(&dst.Subtitle, src.Subtitle, "report.subtitle", source)...)
 	mergeErrors = append(mergeErrors, mergeStringField(&dst.Description, src.Description, "report.description", source)...)
 	mergeErrors = append(mergeErrors, mergeStringField(&dst.Copyright, src.Copyright, "report.copyright", source)...)
-	mergeErrors = append(mergeErrors, mergeStringField(&dst.CSS, src.CSS, "report.css", source)...)
 
 	return mergeErrors
 }
@@ -625,6 +624,10 @@ func validateConfig(config Config) error {
 
 	validationErrors = append(validationErrors, validateAuthConfig(config.Auth)...)
 
+	for identityName, identity := range config.Identities {
+		validationErrors = append(validationErrors, validateIdentityDefinition(identityName, identity)...)
+	}
+
 	if config.HostDefaults.Identity != "" {
 		if _, exists := config.Identities[config.HostDefaults.Identity]; !exists {
 			validationErrors = append(validationErrors, fmt.Sprintf("host_defaults.identity references unknown identity %q", config.HostDefaults.Identity))
@@ -658,6 +661,11 @@ func validateConfig(config Config) error {
 	)...)
 
 	for templateName, template := range config.HostTemplates {
+		if template.Identity != "" {
+			if _, exists := config.Identities[template.Identity]; !exists {
+				validationErrors = append(validationErrors, fmt.Sprintf("host_template %q identity references unknown identity %q", templateName, template.Identity))
+			}
+		}
 		validationErrors = append(validationErrors, validateCheckReferences(
 			fmt.Sprintf("host_template %q", templateName),
 			template.CheckGroups,
@@ -667,6 +675,11 @@ func validateConfig(config Config) error {
 	}
 
 	for groupName, hostGroup := range config.HostGroups {
+		if hostGroup.Identity != "" {
+			if _, exists := config.Identities[hostGroup.Identity]; !exists {
+				validationErrors = append(validationErrors, fmt.Sprintf("host_group %q identity references unknown identity %q", groupName, hostGroup.Identity))
+			}
+		}
 		validationErrors = append(validationErrors, validateCheckReferences(
 			fmt.Sprintf("host_group %q", groupName),
 			hostGroup.CheckGroups,
@@ -691,9 +704,11 @@ func validateConfig(config Config) error {
 			)...)
 
 			identityName := resolveIdentityName(config, host, hostGroup)
+			var identity Identity
+			var identityExists bool
 			if identityName == "" {
 				validationErrors = append(validationErrors, fmt.Sprintf("%s has no resolved identity", hostContext))
-			} else if _, exists := config.Identities[identityName]; !exists {
+			} else if identity, identityExists = config.Identities[identityName]; !identityExists {
 				validationErrors = append(validationErrors, fmt.Sprintf("%s resolves to unknown identity %q", hostContext, identityName))
 			}
 
@@ -704,6 +719,25 @@ func validateConfig(config Config) error {
 				check, exists := config.Checks[checkName]
 				if !exists {
 					continue
+				}
+				if identityExists && isAWSSSMIdentity(identity) && !check.Local {
+					hasInstanceID := strings.TrimSpace(host.Target.InstanceID) != ""
+					hasTag := targetHasTag(host.Target)
+					if !hasInstanceID && !hasTag {
+						validationErrors = append(validationErrors, fmt.Sprintf("%s check %q uses aws_ssm identity %q but target.instance_id or target.tag.key/value is empty", hostContext, checkName, identityName))
+					}
+					if hasInstanceID && hasTag {
+						validationErrors = append(validationErrors, fmt.Sprintf("%s check %q uses aws_ssm identity %q but cannot define both target.instance_id and target.tag", hostContext, checkName, identityName))
+					}
+					if hasTag && !targetTagComplete(host.Target, hostName) {
+						validationErrors = append(validationErrors, fmt.Sprintf("%s check %q uses aws_ssm identity %q but target.tag requires key; value defaults to the host name when omitted", hostContext, checkName, identityName))
+					}
+					if strings.TrimSpace(check.Service) != "" {
+						validationErrors = append(validationErrors, fmt.Sprintf("%s check %q uses aws_ssm identity %q but service checks are not supported; use command instead", hostContext, checkName, identityName))
+					}
+					if strings.TrimSpace(check.URL) != "" {
+						validationErrors = append(validationErrors, fmt.Sprintf("%s check %q uses aws_ssm identity %q but url checks are not supported for host checks", hostContext, checkName, identityName))
+					}
 				}
 
 				checkVars := mergeVars(check.Vars, resolvedChecks[checkName].Vars, hostVars)
@@ -767,6 +801,23 @@ func validateAuthConfig(authConfig AuthConfig) []string {
 	}
 
 	return validationErrors
+}
+
+func validateIdentityDefinition(identityName string, identity Identity) []string {
+	identityType := normalizeIdentityType(identity)
+	switch identityType {
+	case "ssh", "aws_ssm":
+	default:
+		return []string{fmt.Sprintf("identity %q has invalid type %q: expected \"ssh\" or \"aws_ssm\"", identityName, identity.Type)}
+	}
+
+	if identityType == "aws_ssm" {
+		if strings.TrimSpace(identity.User) != "" || strings.TrimSpace(identity.Key) != "" || strings.TrimSpace(identity.Password) != "" || strings.TrimSpace(identity.Passphrase) != "" {
+			return []string{fmt.Sprintf("identity %q uses type aws_ssm and cannot define SSH user/key/password fields", identityName)}
+		}
+	}
+
+	return nil
 }
 
 func validateCheckDefinition(context string, check Check) []string {
@@ -1929,6 +1980,24 @@ func collectIdentityChecks(config Config) []PreflightCheck {
 	var checks []PreflightCheck
 	for _, name := range identityNames {
 		identity := config.Identities[name]
+		if isAWSSSMIdentity(identity) {
+			details := []string{"AWS SSM identity is configured."}
+			if strings.TrimSpace(identity.Region) != "" {
+				details = append(details, fmt.Sprintf("region: %s", identity.Region))
+			} else {
+				details = append(details, "region: AWS default chain")
+			}
+			if strings.TrimSpace(identity.Profile) != "" {
+				details = append(details, fmt.Sprintf("profile: %s", identity.Profile))
+			}
+			checks = append(checks, PreflightCheck{
+				Name:    fmt.Sprintf("Identity %s", name),
+				Status:  "ok",
+				Message: strings.Join(details, " "),
+			})
+			continue
+		}
+
 		if strings.TrimSpace(identity.Key) != "" {
 			keyPath := filepath.Clean(identity.Key)
 			keyContents, err := os.ReadFile(keyPath)

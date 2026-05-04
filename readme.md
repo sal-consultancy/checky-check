@@ -107,9 +107,61 @@ identities:
     password: ${env.CC_PASSWORD}
 ```
 
+### AWS SSM
+
+AWS credentials are not stored in CheckyCheck config. Use the normal AWS credential chain, such as environment variables, shared profiles, instance roles, or container roles.
+
+```yaml
+identities:
+  aws_prod:
+    type: aws_ssm
+    region: eu-west-1
+    profile: customer-prod # optional
+```
+
+SSM hosts use the logical host name as the UI/history name and `target.instance_id` as the AWS target:
+
+```yaml
+host_groups:
+  customer:
+    identity: aws_prod
+    hosts:
+      app01:
+        target:
+          instance_id: i-0123456789abcdef0
+        host_vars:
+          role: web
+```
+
+You can also target exactly one EC2 instance by tag. This requires `ec2:DescribeInstances` in addition to the SSM permissions:
+
+```yaml
+host_groups:
+  customer:
+    identity: aws_prod
+    hosts:
+      sap-test:
+        target:
+          tag:
+            key: Host_name
+            value: saptst1
+```
+
+If `target.tag.value` is omitted, CheckyCheck uses the logical host name as the tag value:
+
+```yaml
+hosts:
+  saptst1:
+    target:
+      tag:
+        key: Host_name
+```
+
+AWS SSM host checks support `command` checks through `AWS-RunShellScript`. `service` checks are SSH-only; use an equivalent command check for SSM.
+
 ## Host Checks
 
-Host checks live under `checks:` and run over SSH unless `local: true` is set.
+Host checks live under `checks:` and run through the resolved identity unless `local: true` is set.
 
 ### Command check
 

@@ -3,4 +3,3 @@ report:
   subtitle: Controle SAL Omgeving
   copyright: Alle rechten voorbehouden SAL CONSULTANCY 2026.
   description: Dit rapport toont specifieke testen die gestructureerd en geautomatiseerd uitgevoerd worden.
-  css: "body { font-family: Arial, sans-serif; } h1 { color: blue; }"

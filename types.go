@@ -26,10 +26,13 @@ type AuthConfig struct {
 }
 
 type Identity struct {
+	Type       string `json:"type,omitempty" yaml:"type,omitempty"`
 	User       string `json:"user" yaml:"user"`
 	Key        string `json:"key,omitempty" yaml:"key,omitempty"`
 	Passphrase string `json:"passphrase,omitempty" yaml:"passphrase,omitempty"`
 	Password   string `json:"password,omitempty" yaml:"password,omitempty"`
+	Region     string `json:"region,omitempty" yaml:"region,omitempty"`
+	Profile    string `json:"profile,omitempty" yaml:"profile,omitempty"`
 }
 
 type HostDefaults struct {
@@ -40,12 +43,14 @@ type HostDefaults struct {
 }
 
 type HostTemplate struct {
+	Identity    string   `json:"identity,omitempty" yaml:"identity,omitempty"`
 	HostVars    VarMap   `json:"host_vars,omitempty" yaml:"host_vars,omitempty"`
 	HostChecks  []string `json:"host_checks" yaml:"host_checks"`
 	CheckGroups []string `json:"check_groups,omitempty" yaml:"check_groups,omitempty"`
 }
 
 type HostGroup struct {
+	Identity    string          `json:"identity,omitempty" yaml:"identity,omitempty"`
 	HostVars    VarMap          `json:"host_vars,omitempty" yaml:"host_vars,omitempty"`
 	HostChecks  []string        `json:"host_checks,omitempty" yaml:"host_checks,omitempty"`
 	CheckGroups []string        `json:"check_groups,omitempty" yaml:"check_groups,omitempty"`
@@ -77,9 +82,20 @@ type Check struct {
 type Host struct {
 	Identity     string   `json:"identity,omitempty" yaml:"identity,omitempty"`
 	HostTemplate string   `json:"host_template,omitempty" yaml:"host_template,omitempty"`
+	Target       Target   `json:"target,omitempty" yaml:"target,omitempty"`
 	HostVars     VarMap   `json:"host_vars,omitempty" yaml:"host_vars,omitempty"`
 	HostChecks   []string `json:"host_checks" yaml:"host_checks"`
 	CheckGroups  []string `json:"check_groups,omitempty" yaml:"check_groups,omitempty"`
+}
+
+type Target struct {
+	InstanceID string `json:"instance_id,omitempty" yaml:"instance_id,omitempty"`
+	Tag        Tag    `json:"tag,omitempty" yaml:"tag,omitempty"`
+}
+
+type Tag struct {
+	Key   string `json:"key,omitempty" yaml:"key,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 type Report struct {
@@ -87,7 +103,6 @@ type Report struct {
 	Subtitle    string `json:"subtitle" yaml:"subtitle"`
 	Description string `json:"description" yaml:"description"`
 	Copyright   string `json:"copyright" yaml:"copyright"`
-	CSS         string `json:"css" yaml:"css"`
 }
 
 type GraphConfig struct {

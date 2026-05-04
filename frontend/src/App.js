@@ -128,25 +128,6 @@ const AppShell = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  useEffect(() => {
-    const styleId = 'report-css-overrides';
-    let styleElement = document.getElementById(styleId);
-
-    if (!styleElement) {
-      styleElement = document.createElement('style');
-      styleElement.id = styleId;
-      document.head.appendChild(styleElement);
-    }
-
-    styleElement.textContent = results.report?.css || '';
-
-    return () => {
-      if (styleElement) {
-        styleElement.textContent = '';
-      }
-    };
-  }, [results.report?.css]);
-
   const handleTestsComplete = () => {
     fetchResults();
   };
