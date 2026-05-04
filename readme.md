@@ -1,4 +1,4 @@
-[![Build and Release](https://github.com/sal-consultancy/checky-check/actions/workflows/build.yml/badge.svg)](https://github.com/sal-consultancy/checky-check/actions/workflows/build.yml)
+[![Build and Release](https://github.com/sal-consultancy/checky-check/actions/workflows/release-tag.yml/badge.svg)](https://github.com/sal-consultancy/checky-check/actions/workflows/release-tag.yml)
 
 # CheckyCheck
 
@@ -248,6 +248,30 @@ Serve the UI:
 ```sh
 checkycheck.exe -port=8071 -config=/path/to/config -mode=serve
 ```
+
+## Docker
+
+Build a local image:
+
+```sh
+docker build --build-arg APP_VERSION=local -t checkycheck:local .
+```
+
+Run the UI with a config directory mounted read-only:
+
+```sh
+docker run --rm \
+  -p 8070:8070 \
+  -e CHECKYCHECK_CONFIG_PATH=/config \
+  -e cc_passphrase="$cc_passphrase" \
+  -v /path/to/config:/config:ro \
+  -v checkycheck-data:/data \
+  checkycheck:local
+```
+
+The container stores runtime data, including `history/checkycheck_history.db`, under `/data`. Keep customer config and secrets outside the image and mount them at runtime.
+
+A production-oriented compose example is available in `docker-compose-dos.yml`. It runs CheckyCheck behind `oauth2-proxy` and Traefik. In that setup, use `auth.mode: proxy` in the CheckyCheck config and provide the oauth2-proxy and Traefik environment variables expected by the compose file.
 
 ## History
 
