@@ -137,6 +137,8 @@ func evaluateCondition(output string, failWhen string, failValue interface{}) bo
 
 func parseFailValues(failValue interface{}) []string {
 	switch v := failValue.(type) {
+	case nil:
+		return []string{}
 	case string:
 		return []string{v}
 	case []interface{}:
@@ -148,7 +150,7 @@ func parseFailValues(failValue interface{}) []string {
 	case []string:
 		return v
 	default:
-		return []string{}
+		return []string{fmt.Sprintf("%v", v)}
 	}
 }
 
