@@ -330,3 +330,38 @@ The chooser page lets you switch between:
 - `admin`
 
 The proxy stores the selected role in a local cookie and injects the corresponding auth headers on proxied requests.
+
+### Corrective actions
+
+Define reusable actions at the top level (or in actions.yaml in a config directory),
+and reference them from checks. Roles are exact role names. Actions run on one host
+with a fresh failed check and a per-host execution lock.
+
+```yaml
+actions:
+  reboot_host:
+    label: Host herstarten
+    type: command
+    command: sudo -n shutdown -r +1
+    allowed_roles: [admin]
+    confirmation: Deze host wordt over één minuut herstart.
+    timeout: 30s
+    verify:
+      check: check_reboot_required
+      wait_for_reconnect: true
+      timeout: 10m
+checks:
+  check_reboot_required:
+    command: needs-restarting -r >/dev/null; echo $?
+    fail_when: ">"
+    fail_value: 0
+    actions:
+      - action: reboot_host
+        when: failed
+```
+
+Verification defaults to the triggering check. With wait_for_reconnect enabled,
+verification must observe a check execution error followed by a passing check before
+the deadline. A missed disconnect or timeout reports failure. Without reconnect,
+the verification check must pass immediately. Jobs are in memory; audit records go
+to the server log. Refresh results after completion. Patch actions do not reboot.

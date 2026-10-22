@@ -358,11 +358,19 @@ func loadConfig(configPath string) (Config, error) {
 		return Config{}, fmt.Errorf("unable to read config path: %w", err)
 	}
 
+	var config Config
 	if info.IsDir() {
-		return loadConfigDir(configPath)
+		config, err = loadConfigDir(configPath)
+	} else {
+		config, err = loadConfigFile(configPath)
 	}
-
-	return loadConfigFile(configPath)
+	if err != nil {
+		return Config{}, err
+	}
+	if err = validateActions(config); err != nil {
+		return Config{}, err
+	}
+	return config, nil
 }
 
 func loadConfigFile(configPath string) (Config, error) {
@@ -435,6 +443,16 @@ func loadConfigDir(configDir string) (Config, error) {
 
 func mergeConfig(dst *Config, src Config, source string) []string {
 	var mergeErrors []string
+	if dst.Actions == nil {
+		dst.Actions = map[string]CorrectiveAction{}
+	}
+	for name, action := range src.Actions {
+		if _, exists := dst.Actions[name]; exists {
+			mergeErrors = append(mergeErrors, fmt.Sprintf("duplicate action %q in %s", name, source))
+		} else {
+			dst.Actions[name] = action
+		}
+	}
 
 	if dst.Identities == nil {
 		dst.Identities = make(map[string]Identity)

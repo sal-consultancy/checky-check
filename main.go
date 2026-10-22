@@ -292,6 +292,7 @@ func (a authContext) requireViewPermission(next http.HandlerFunc) http.HandlerFu
 
 func serve(port int, configPath string) {
 	auth := authContext{config: loadServerAuthConfig(configPath)}
+	registerActions(configPath, auth)
 
 	// Serve de build directory
 	subFS, err := fs.Sub(content, "frontend/build")

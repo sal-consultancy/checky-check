@@ -71,6 +71,27 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
       .catch(() => setSparklineData({}));
   }, []);
 
+  const [actionDefinitions, setActionDefinitions] = useState({});
+  useEffect(() => { fetch('/api/action-definitions').then(r => r.ok ? r.json() : {}).then(setActionDefinitions).catch(() => {}); }, []);
+  const [actionJobs, setActionJobs] = useState({});
+  const runAction = async (host, checkName, actionId, action) => {
+    if (!window.confirm(`${host}: ${action.confirmation || action.label}?`)) return;
+    setActionJobs(prev => ({ ...prev, [host]: 'Starting…' }));
+    try {
+      const response = await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ host, check: checkName, action: actionId }) });
+      if (!response.ok) throw new Error(await response.text());
+      let job = await response.json();
+      while (job.status === 'running') {
+        setActionJobs(prev => ({ ...prev, [host]: 'Running…' }));
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const poll = await fetch(`/api/actions?id=${encodeURIComponent(job.id)}`);
+        if (!poll.ok) throw new Error(await poll.text());
+        job = await poll.json();
+      }
+      window.alert(`${host}: ${job.status}\n${job.output || ''}`);
+    } catch (error) { window.alert(error.message); }
+    finally { setActionJobs(prev => ({ ...prev, [host]: null })); }
+  };
   const canRerunChecks = authSession?.permissions?.operate ?? true;
 
   if (status === 'config_error') {
@@ -445,6 +466,12 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                   >
                     Re-run host
                   </button>
+                  {detail.status === 'failed' && !detail.error_type && (check.actions || []).filter(ref => ref.when === 'failed' && actionDefinitions[ref.action]?.allowed_roles?.includes(authSession?.role)).map(ref => { const id = ref.action; const action = actionDefinitions[id]; return (
+                    <button key={id} className="button is-small is-warning ml-2" disabled={!!actionJobs[detail.host]} onClick={() => runAction(detail.host, checkName, id, action)}>
+                      {actionJobs[detail.host] || action.label}
+                    </button>
+                  ); })}
+
                 </td>
               )}
             </tr>

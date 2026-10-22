@@ -3,15 +3,16 @@ package main
 type VarMap map[string]interface{}
 
 type Config struct {
-	Identities    map[string]Identity     `json:"identities" yaml:"identities"`
-	HostDefaults  HostDefaults            `json:"host_defaults" yaml:"host_defaults"`
-	HostTemplates map[string]HostTemplate `json:"host_templates" yaml:"host_templates"`
-	CheckGroups   map[string]CheckGroup   `json:"check_groups" yaml:"check_groups"`
-	Checks        map[string]Check        `json:"checks" yaml:"checks"`
-	URLChecks     map[string]Check        `json:"url_checks,omitempty" yaml:"url_checks,omitempty"`
-	HostGroups    map[string]HostGroup    `json:"host_groups" yaml:"host_groups"`
-	Report        Report                  `json:"report" yaml:"report"`
-	Auth          AuthConfig              `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Actions       map[string]CorrectiveAction `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Identities    map[string]Identity         `json:"identities" yaml:"identities"`
+	HostDefaults  HostDefaults                `json:"host_defaults" yaml:"host_defaults"`
+	HostTemplates map[string]HostTemplate     `json:"host_templates" yaml:"host_templates"`
+	CheckGroups   map[string]CheckGroup       `json:"check_groups" yaml:"check_groups"`
+	Checks        map[string]Check            `json:"checks" yaml:"checks"`
+	URLChecks     map[string]Check            `json:"url_checks,omitempty" yaml:"url_checks,omitempty"`
+	HostGroups    map[string]HostGroup        `json:"host_groups" yaml:"host_groups"`
+	Report        Report                      `json:"report" yaml:"report"`
+	Auth          AuthConfig                  `json:"auth,omitempty" yaml:"auth,omitempty"`
 }
 
 type AuthConfig struct {
@@ -62,7 +63,29 @@ type CheckGroup struct {
 	Checks []string `json:"checks" yaml:"checks"`
 }
 
+type ActionReference struct {
+	Action string `json:"action" yaml:"action"`
+	When   string `json:"when" yaml:"when"`
+}
+type ActionVerification struct {
+	Check            string `json:"check" yaml:"check"`
+	WaitForReconnect bool   `json:"wait_for_reconnect" yaml:"wait_for_reconnect"`
+	Timeout          string `json:"timeout" yaml:"timeout"`
+}
+type CorrectiveAction struct {
+	Type         string             `json:"type" yaml:"type"`
+	AllowedRoles []string           `json:"allowed_roles" yaml:"allowed_roles"`
+	Verify       ActionVerification `json:"verify" yaml:"verify"`
+
+	Label        string `json:"label" yaml:"label"`
+	Command      string `json:"command" yaml:"command"`
+	Confirmation string `json:"confirmation" yaml:"confirmation"`
+	Timeout      string `json:"timeout" yaml:"timeout"`
+}
+
 type Check struct {
+	Actions []ActionReference `json:"actions,omitempty" yaml:"actions,omitempty"`
+
 	Title            string          `json:"title" yaml:"title"`
 	Command          string          `json:"command,omitempty" yaml:"command,omitempty"`
 	Service          string          `json:"service,omitempty" yaml:"service,omitempty"`
