@@ -1,0 +1,10 @@
+actions:
+  uptime_demo:
+    label: Demoactie uptime
+    type: command
+    command: echo CHECKY_UPTIME_DEMO
+    allowed_roles: [admin]
+    confirmation: Onschuldige demoactie uitvoeren? Deze herstart de host niet.
+    timeout: 5s
+    verify:
+      check: check_uptime

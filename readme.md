@@ -365,3 +365,9 @@ verification must observe a check execution error followed by a passing check be
 the deadline. A missed disconnect or timeout reports failure. Without reconnect,
 the verification check must pass immediately. Jobs are in memory; audit records go
 to the server log. Refresh results after completion. Patch actions do not reboot.
+
+Action references support `when: always` for manual execution on passed checks, in
+addition to `when: failed`. Roles, confirmation and a fresh check without execution
+errors remain required. The command itself must permit unconditional execution;
+a script that exits when no reboot is needed will still skip the reboot.
+Actions are also listed with per-host buttons in Show details.

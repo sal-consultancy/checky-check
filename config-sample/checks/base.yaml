@@ -5,5 +5,8 @@ checks:
     command: "awk '{print int($1 / 86400)}' /proc/uptime"
     fail_when: ">"
     fail_value: ${uptime_limit}
+    actions:
+      - action: uptime_demo
+        when: always
     vars:
       uptime_limit: "77"

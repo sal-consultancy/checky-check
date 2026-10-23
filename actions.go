@@ -78,9 +78,11 @@ func registerActions(path string, auth authContext) {
 		}
 		action, ok := cfg.Actions[req.Action]
 		linked := false
+		always := false
 		for _, ref := range cfg.Checks[req.Check].Actions {
-			if ref.Action == req.Action && ref.When == "failed" {
+			if ref.Action == req.Action && (ref.When == "failed" || ref.When == "always") {
 				linked = true
+				always = always || ref.When == "always"
 			}
 		}
 		if !slices.Contains(action.AllowedRoles, session.Role) {
@@ -117,7 +119,7 @@ func registerActions(path string, auth authContext) {
 				log.Printf("Corrective action user=%q host=%q check=%q action=%q status=%s", job.User, req.Host, req.Check, req.Action, status)
 			}()
 			result, e := executeHostCheck(cfg, req.Host, target.HostConfig, target.HostGroup, req.Check, log.Default())
-			if e != nil || result.Status != "failed" || result.ErrorType != "" {
+			if e != nil || (!always && result.Status != "failed") || result.ErrorType != "" {
 				output = "Check no longer requires correction or could not be evaluated"
 				return
 			}
@@ -212,8 +214,8 @@ func validateActions(c Config) error {
 			if _, ok := c.Actions[ref.Action]; !ok {
 				return fmt.Errorf("check %q references unknown action %q", name, ref.Action)
 			}
-			if ref.When != "failed" {
-				return fmt.Errorf("check %q action requires when: failed", name)
+			if ref.When != "failed" && ref.When != "always" {
+				return fmt.Errorf("check %q action requires when: failed or always", name)
 			}
 		}
 	}

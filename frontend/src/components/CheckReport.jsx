@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import ChartComponent from './ChartComponent';
 import { FaChevronDown, FaChevronUp, FaPlus, FaMinus, FaTimes } from 'react-icons/fa';
+import ActionDialog from './ActionDialog';
 import CheckHistoryModal from './CheckHistoryModal';
 import { formatFailValues, formatFailWhen } from '../utils/checkFormatting';
 
@@ -74,8 +75,9 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
   const [actionDefinitions, setActionDefinitions] = useState({});
   useEffect(() => { fetch('/api/action-definitions').then(r => r.ok ? r.json() : {}).then(setActionDefinitions).catch(() => {}); }, []);
   const [actionJobs, setActionJobs] = useState({});
+  const [actionDialog, setActionDialog] = useState(null);
   const runAction = async (host, checkName, actionId, action) => {
-    if (!window.confirm(`${host}: ${action.confirmation || action.label}?`)) return;
+    setActionDialog({ host, checkName, actionId, label: action.label, phase: 'running' });
     setActionJobs(prev => ({ ...prev, [host]: 'Starting…' }));
     try {
       const response = await fetch('/api/actions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ host, check: checkName, action: actionId }) });
@@ -88,10 +90,19 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
         if (!poll.ok) throw new Error(await poll.text());
         job = await poll.json();
       }
-      window.alert(`${host}: ${job.status}\n${job.output || ''}`);
-    } catch (error) { window.alert(error.message); }
+      setActionDialog({ host, checkName, actionId, label: action.label, phase: 'result', status: job.status, output: job.output });
+    } catch (error) { setActionDialog({ host, checkName, actionId, label: action.label, phase: 'result', status: 'failed', output: error.message }); }
     finally { setActionJobs(prev => ({ ...prev, [host]: null })); }
   };
+  const renderActions = (checkName, check, detail) => (
+    (check.actions || []).filter(ref => !detail.error_type && (ref.when === 'always' || (ref.when === 'failed' && detail.status === 'failed')) && actionDefinitions[ref.action]?.allowed_roles?.includes(authSession?.role)).map(ref => {
+      const action = actionDefinitions[ref.action];
+      return <button key={ref.action} className="button is-small is-warning ml-2" disabled={!!actionJobs[detail.host]} onClick={() => {
+        setRerunFeedback(prev => ({ ...prev, actionDialog: '' }));
+        setActionDialog({ host: detail.host, checkName, actionId: ref.action, label: action.label, confirmation: `${action.confirmation || action.label}${detail.status === 'passed' ? ' This check has passed; you are starting this action manually.' : ''}`, phase: 'confirm' });
+      }}>{actionJobs[detail.host] || action.label}</button>;
+    })
+  );
   const canRerunChecks = authSession?.permissions?.operate ?? true;
 
   if (status === 'config_error') {
@@ -466,11 +477,7 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
                   >
                     Re-run host
                   </button>
-                  {detail.status === 'failed' && !detail.error_type && (check.actions || []).filter(ref => ref.when === 'failed' && actionDefinitions[ref.action]?.allowed_roles?.includes(authSession?.role)).map(ref => { const id = ref.action; const action = actionDefinitions[id]; return (
-                    <button key={id} className="button is-small is-warning ml-2" disabled={!!actionJobs[detail.host]} onClick={() => runAction(detail.host, checkName, id, action)}>
-                      {actionJobs[detail.host] || action.label}
-                    </button>
-                  ); })}
+                  {renderActions(checkName, check, detail)}
 
                 </td>
               )}
@@ -683,7 +690,13 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
 
                 {showDetails[checkName] && (
                   <div className="check_details has-text-left py-3 px-3 my-3">
-                    <h5 className="is-size-6 write">Description</h5>
+                    <h5 className="is-size-6 write">Actions</h5>
+                    {(check.actions || []).length === 0 ? <p>No actions configured.</p> : <>
+                      <p className="mb-2">Choose a host to run an action. Actions marked “always” can also run when the check has passed.</p>
+                      {(check.actions || []).map(ref => <p key={ref.action}>{actionDefinitions[ref.action]?.label || ref.action} ({ref.when})</p>)}
+                      {summary[checkName].details.map(detail => <div key={detail.host} className="my-2"><strong>{detail.host}</strong> ({detail.status}){renderActions(checkName, check, detail)}</div>)}
+                    </>}
+                    <h5 className="is-size-6 write mt-3">Description</h5>
                     <p className="is-size-6 has-text-weight-light">{check.description}</p>
                     <h5 className="is-size-6 write mt-3">
                       {check.url ? 'URL' : check.service ? 'Service' : 'Command'}
@@ -739,6 +752,14 @@ const CheckReport = ({ results, checks, urlResults, urlChecks, theme, status, au
         );
       })}
       </div>
+      {actionDialog && <ActionDialog
+        action={actionDialog}
+        busy={actionDialog.phase === 'running' || !!rerunLoading.actionDialog}
+        feedback={rerunFeedback.actionDialog}
+        onClose={() => setActionDialog(null)}
+        onConfirm={() => runAction(actionDialog.host, actionDialog.checkName, actionDialog.actionId, actionDefinitions[actionDialog.actionId])}
+        onRerun={() => rerunTarget({ kind: 'host_check', check_name: actionDialog.checkName, host: actionDialog.host }, 'actionDialog', 'actionDialog', `${actionDialog.checkName} on ${actionDialog.host}`)}
+      />}
       <CheckHistoryModal detailTarget={detailTarget} onClose={() => setDetailTarget(null)} />
     </div>
   );

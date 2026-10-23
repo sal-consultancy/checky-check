@@ -1453,3 +1453,7 @@ footer.footer .content p:last-child {
     min-height: 260px;
   }
 }
+
+.action-dialog { padding: 0; border: 0; border-radius: 8px; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+.action-dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+.action-dialog .modal-card { max-height: calc(100vh - 32px); }
